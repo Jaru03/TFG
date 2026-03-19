@@ -1,6 +1,6 @@
 # EduTech
 
-Plataforma e-learning full‑stack con **React + Vite** en el frontend y **Express + PostgreSQL** en el backend.
+Plataforma e-learning full‑stack con **React + Vite** en el frontend y **Express + PostgreSQL** en el backend, organizada como **monorepo con npm workspaces**.
 
 ## 🧩 Características principales
 
@@ -14,83 +14,102 @@ Plataforma e-learning full‑stack con **React + Vite** en el frontend y **Expre
 ## 🧰 Requisitos
 
 - Node.js **18+**
-- PostgreSQL
+- Docker (para la base de datos PostgreSQL)
 
-## 🗂 Estructura principal
+## 🗂 Estructura del monorepo
 
-- `/app.js` - servidor Express + API
-- `/routes` - rutas REST (`/api/*` + `/auth/*`)
-- `/controllers` - lógica de controlador
-- `/services` - acceso a base de datos
-- `/client/` - aplicación React (Vite)
-- `/database/elearning_platform.sql` - esquema PostgreSQL inicial
+```
+TFG/
+├── apps/
+│   ├── backend/          # Servidor Express + API REST
+│   │   ├── app.js
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── database/
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   └── services/
+│   └── client/           # Aplicación React (Vite)
+│       ├── src/
+│       └── vite.config.js
+├── .env                  # Variables de entorno compartidas
+├── docker-compose.yml    # Base de datos PostgreSQL
+├── package.json          # Raíz del monorepo (workspaces)
+└── package-lock.json
+```
+
+Las dependencias de todos los workspaces se instalan en el `node_modules` raíz mediante **npm workspaces**. No hay `node_modules` individuales por app.
 
 ## 🚀 Configuración local (desarrollo)
 
-1. Clona el repositorio:
-   ```bash
-   git clone <repo-url>
-   cd TFG_EduTech
-   ```
+### 1. Instalar dependencias
 
-2. Instala dependencias del backend:
-   ```bash
-   npm install
-   ```
+Desde la raíz del proyecto (instala todo de una vez):
 
-3. Instala dependencias del frontend:
-   ```bash
-   cd client
-   npm install
-   cd ..
-   ```
+```bash
+npm install
+```
 
-4. Crea la base de datos y carga el esquema:
-   - Crea una base (ej: `edutech_dev`)
-   - Ejecuta el SQL en `database/elearning_platform.sql` en tu instancia PostgreSQL
+### 2. Variables de entorno
 
-5. Copia la plantilla de variables de entorno:
-   ```bash
-   cp .env.example .env
-   ```
+Crea un `.env` en la raíz con:
 
-6. Rellena `.env` con tus valores (especialmente los de base de datos y Google OAuth):
+```env
+# PostgreSQL
+DB_HOST=localhost
+DB_PORT=5434
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=elearning_platform
 
-   ```env
-   # PostgreSQL
-   DATABASE_URL=postgresql://<user>:<pass>@<host>:<port>/<db>
+# Sesión
+SESSION_SECRET=una_clave_segura
 
-   # Sesión
-   SESSION_SECRET=una_clave_segura
+# Google OAuth
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
 
-   # Google OAuth (requerido para login)
-   GOOGLE_CLIENT_ID=...
-   GOOGLE_CLIENT_SECRET=...
-   GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
-   ```
+# Frontend (para redirecciones tras login/logout)
+CLIENT_ORIGIN=http://localhost:5173
+```
 
-7. Arranca el backend y frontend en paralelo (desde la raíz del proyecto):
-   ```bash
-   npm run dev
-   ```
+### 3. Arrancar la base de datos
 
-   - Backend (API): http://localhost:3000
-   - Frontend (React): http://localhost:5173
+```bash
+docker compose up -d
+```
 
-## 🔌 API Key Endpoints (principales)
+Esto levanta PostgreSQL 17 en el puerto `5434` e inicializa el esquema automáticamente.
 
-El frontend consume la API a través del proxy de Vite (`/api/*`). Algunos endpoints clave:
+### 4. Arrancar backend y frontend en paralelo
+
+```bash
+npm run dev
+```
+
+- Backend (API): http://localhost:3000
+- Frontend (React): http://localhost:5173
+
+## 🔌 Google OAuth — URIs autorizadas
+
+En Google Cloud Console configura:
+
+- **Origen JavaScript autorizado:** `http://localhost:3000`
+- **URI de redireccionamiento autorizado:** `http://localhost:3000/auth/google/callback`
+
+## 🔌 API — Endpoints principales
 
 - **Autenticación**
-  - `GET /auth/google` → inicia logeo con Google
+  - `GET /auth/google` → inicia login con Google
   - `GET /auth/google/callback` → callback OAuth
   - `GET /auth/logout` → cerrar sesión
 
 - **Cursos**
-  - `GET /api/courses` → lista pública de cursos
-  - `POST /api/courses` → crea curso (profesor/administrador)
-  - `PUT /api/courses/:id` → actualiza curso (dueño / admin)
-  - `DELETE /api/courses/:id` → borra curso (dueño / admin)
+  - `GET /api/courses`
+  - `POST /api/courses` (profesor/admin)
+  - `PUT /api/courses/:id` (propietario/admin)
+  - `DELETE /api/courses/:id` (propietario/admin)
 
 - **Lecciones**
   - `GET /api/courses/:courseId/lessons`
@@ -99,44 +118,29 @@ El frontend consume la API a través del proxy de Vite (`/api/*`). Algunos endpo
 - **Tests / Preguntas / Resultados**
   - `GET /api/tests`
   - `POST /api/courses/:courseId/tests` (propietario)
-  - `POST /api/tests/:testId/submit` → envío de respuestas / cálculo de resultado
+  - `POST /api/tests/:testId/submit`
 
 - **Usuarios (admin)**
   - `GET /api/users`
-  - `PUT /api/users/:id/role` → cambiar rol
-  - `DELETE /api/users/:id` → borrar usuario
+  - `PUT /api/users/:id/role`
+  - `DELETE /api/users/:id`
 
-## 🧪 Probar CORS / Proxy (desarrollo)
-
-El frontend en `http://localhost:5173` hace peticiones a `/api/*` que se reenvían automáticamente a `http://localhost:3000` gracias al proxy de Vite (configurado en `client/vite.config.js`).
-
-Si necesitas probar sin Vite, puedes llamar directo al backend:
+## 📦 Producción
 
 ```bash
-curl http://localhost:3000/api/courses
+# Build del frontend
+npm run client:build
+
+# Arrancar en producción (el backend sirve el build de React)
+npm -w edutech run start
 ```
 
-## 📦 Producción (build)
+## 🧹 Scripts disponibles (raíz)
 
-1. Genera el build del frontend:
-   ```bash
-   cd client
-   npm run build
-   cd ..
-   ```
-
-2. El backend ya sirve los archivos estáticos de `client/dist` si existen.
-
-3. Inicia el servidor en modo producción:
-   ```bash
-   npm start
-   ```
-
-## 🧹 Limpieza y notas
-
-- El frontend es React + Vite.
-- Backend expone solo APIs JSON y sirve el build de React en producción.
-
----
-
-Si quieres que agreguemos funciones extra (notificaciones, pagos, roles por curso, etc.), dime y avanzamos juntos.
+| Script | Descripción |
+|---|---|
+| `npm run dev` | Arranca backend + frontend en paralelo |
+| `npm run server` | Solo el backend (nodemon) |
+| `npm run client:dev` | Solo el frontend (Vite) |
+| `npm run client:build` | Build de producción del frontend |
+| `npm run client:start` | Preview del build de producción |
