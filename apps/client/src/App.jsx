@@ -1,17 +1,19 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import CoursesPage from './pages/CoursesPage';
-import CourseFormPage from './pages/CourseFormPage';
-import CourseDetailPage from './pages/CourseDetailPage';
-import LessonsPage from './pages/LessonsPage';
-import TestsPage from './pages/TestsPage';
-import TestViewPage from './pages/TestViewPage';
-import TestManagePage from './pages/TestManagePage';
-import UsersAdminPage from './pages/UsersAdminPage';
-import NotFoundPage from './pages/NotFoundPage';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import {
+  CourseDetailPage,
+  CourseFormPage,
+  CoursesPage,
+  DashboardPage,
+  LessonsPage,
+  LoginPage,
+  NotFoundPage,
+  TestManagePage,
+  TestsPage,
+  TestViewPage,
+  UsersAdminPage,
+} from "./pages";
 
 axios.defaults.withCredentials = true;
 
@@ -22,7 +24,7 @@ function App() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get('/api/auth/me');
+        const res = await axios.get("/api/auth/me");
         setUser(res.data);
       } catch (err) {
         setUser(null);
@@ -38,22 +40,33 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={user ? <DashboardPage user={user} /> : <LoginPage />} />
+      <Route
+        path="/"
+        element={user ? <DashboardPage user={user} /> : <LoginPage />}
+      />
       <Route
         path="/courses"
-        element={user ? <CoursesPage user={user} /> : <Navigate to="/" replace />}
+        element={
+          user ? <CoursesPage user={user} /> : <Navigate to="/" replace />
+        }
       />
       <Route
         path="/courses/create"
-        element={user ? <CourseFormPage user={user} /> : <Navigate to="/" replace />}
+        element={
+          user ? <CourseFormPage user={user} /> : <Navigate to="/" replace />
+        }
       />
       <Route
         path="/courses/:id"
-        element={user ? <CourseDetailPage user={user} /> : <Navigate to="/" replace />}
+        element={
+          user ? <CourseDetailPage user={user} /> : <Navigate to="/" replace />
+        }
       />
       <Route
         path="/courses/:id/lessons"
-        element={user ? <LessonsPage user={user} /> : <Navigate to="/" replace />}
+        element={
+          user ? <LessonsPage user={user} /> : <Navigate to="/" replace />
+        }
       />
       <Route
         path="/courses/:id/tests"
@@ -61,15 +74,21 @@ function App() {
       />
       <Route
         path="/tests/:id"
-        element={user ? <TestViewPage user={user} /> : <Navigate to="/" replace />}
+        element={
+          user ? <TestViewPage user={user} /> : <Navigate to="/" replace />
+        }
       />
       <Route
         path="/tests/:id/manage"
-        element={user ? <TestManagePage user={user} /> : <Navigate to="/" replace />}
+        element={
+          user ? <TestManagePage user={user} /> : <Navigate to="/" replace />
+        }
       />
       <Route
         path="/users"
-        element={user ? <UsersAdminPage user={user} /> : <Navigate to="/" replace />}
+        element={
+          user ? <UsersAdminPage user={user} /> : <Navigate to="/" replace />
+        }
       />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

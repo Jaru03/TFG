@@ -1,0 +1,11 @@
+export { default as CourseDetailPage } from './CourseDetailPage';
+export { default as CourseFormPage } from './CourseFormPage';
+export { default as CoursesPage } from './CoursesPage';
+export { default as DashboardPage } from './DashboardPage';
+export { default as LessonsPage } from './LessonsPage';
+export { default as LoginPage } from './LoginPage';
+export { default as NotFoundPage } from './NotFoundPage';
+export { default as TestManagePage } from './TestManagePage';
+export { default as TestsPage } from './TestsPage';
+export { default as TestViewPage } from './TestViewPage';
+export { default as UsersAdminPage } from './UsersAdminPage';
