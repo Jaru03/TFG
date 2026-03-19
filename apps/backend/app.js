@@ -10,6 +10,7 @@ const { sessionConfig } = require('./config/session');
 require('./config/passport');
 
 const authRoutes = require('./routes/auth.routes');
+const adminRoutes = require('./routes/admin.routes');
 const apiAuthRoutes = require('./routes/api/auth.routes');
 const apiCourseRoutes = require('./routes/api/courses.routes');
 const apiUsersRoutes = require('./routes/api/users.routes');
@@ -51,6 +52,9 @@ app.use('/api/results', apiResultsRoutes);
 
 // Rutas de autenticación / sesión
 app.use('/auth', authRoutes);
+
+// Rutas de backoffice admin
+app.use('/api/admin', adminRoutes);
 
 
 // En producción servir React build

@@ -4,7 +4,11 @@ const router = express.Router();
 
 const { logout, authCallback, authFailure } = require('../controllers/auth.controller');
 
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google', (req, res, next) => {
+  const role = req.query.role === 'profesor' ? 'profesor' : 'alumno';
+  req.session.pendingRole = role;
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
 
 router.get(
   '/google/callback',

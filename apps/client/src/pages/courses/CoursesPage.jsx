@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import Header from '../components/Header';
-import Button from '../components/Button';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
 
 export default function CoursesPage({ user }) {
   const [courses, setCourses] = useState([]);

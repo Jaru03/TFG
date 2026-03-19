@@ -25,9 +25,10 @@ if (!hasGoogleConfig) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL
+        callbackURL: process.env.GOOGLE_CALLBACK_URL,
+        passReqToCallback: true
       },
-      async (accessToken, refreshToken, profile, done) => {
+      async (req, accessToken, refreshToken, profile, done) => {
         try {
           const googleId = profile.id;
           const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
@@ -35,7 +36,9 @@ if (!hasGoogleConfig) {
 
           let user = await findByGoogleId(googleId);
           if (!user) {
-            user = await createUser({ googleId, name, email });
+            const role = req.session.pendingRole || 'alumno';
+            delete req.session.pendingRole;
+            user = await createUser({ googleId, name, email, role });
           }
 
           return done(null, user);

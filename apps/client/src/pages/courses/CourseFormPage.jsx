@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import Header from '../components/Header';
-import Button from '../components/Button';
+import Header from '../../components/Header';
+import Button from '../../components/Button';
 
 export default function CourseFormPage({ user }) {
   const [title, setTitle] = useState('');

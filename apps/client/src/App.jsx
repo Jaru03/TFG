@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "./hooks/useAuth";
 import {
+  AdminPage,
   CourseDetailPage,
   CourseFormPage,
   CoursesPage,
@@ -12,7 +13,6 @@ import {
   TestManagePage,
   TestsPage,
   TestViewPage,
-  UsersAdminPage,
 } from "./pages";
 
 axios.defaults.withCredentials = true;
@@ -70,12 +70,8 @@ function App() {
           user ? <TestManagePage user={user} /> : <Navigate to="/" replace />
         }
       />
-      <Route
-        path="/users"
-        element={
-          user ? <UsersAdminPage user={user} /> : <Navigate to="/" replace />
-        }
-      />
+
+      <Route path="/admin" element={<AdminPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
