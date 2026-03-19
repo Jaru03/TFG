@@ -1,14 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
-export default function Header({ user }) {
-  const navigate = useNavigate();
-
-  const logout = async () => {
-    await axios.get('/auth/logout');
-    navigate('/');
-    window.location.reload();
-  };
+export default function Header() {
+  const { user, logout } = useAuth();
 
   return (
     <header className="header">

@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import axios from "axios";
+import { useAuth } from "./hooks/useAuth";
 import {
   CourseDetailPage,
   CourseFormPage,
@@ -18,21 +18,7 @@ import {
 axios.defaults.withCredentials = true;
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await axios.get("/api/auth/me");
-        setUser(res.data);
-      } catch (err) {
-        setUser(null);
-      } finally {
-        setChecking(false);
-      }
-    })();
-  }, []);
+  const { user, checking } = useAuth();
 
   if (checking) {
     return <div className="loading">Cargando...</div>;
