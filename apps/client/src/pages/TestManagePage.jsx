@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
+import Button from '../components/Button';
 
 export default function TestManagePage({ user }) {
   const { id } = useParams();
@@ -51,13 +52,13 @@ export default function TestManagePage({ user }) {
 
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main className="container">
         <section>
           <h1>Gestionar preguntas del test</h1>
 
           <p>
-            <Link className="button" to="/courses">Volver a cursos</Link>
+            <Button to="/courses">Volver a cursos</Button>
           </p>
 
           {error && <div className="alert alert-error">{error}</div>}
@@ -110,9 +111,7 @@ export default function TestManagePage({ user }) {
                 <option value="C">C</option>
               </select>
             </div>
-            <button className="button" type="submit">
-              Agregar pregunta
-            </button>
+            <Button type="submit">Agregar pregunta</Button>
           </form>
 
           <h2>Preguntas existentes</h2>

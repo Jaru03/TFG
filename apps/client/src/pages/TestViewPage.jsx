@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
+import Button from '../components/Button';
 
 export default function TestViewPage({ user }) {
   const { id } = useParams();
@@ -54,7 +55,7 @@ export default function TestViewPage({ user }) {
   if (error) {
     return (
       <div className="container">
-        <Header user={user} />
+        <Header />
         <div className="alert alert-error">{error}</div>
       </div>
     );
@@ -62,15 +63,13 @@ export default function TestViewPage({ user }) {
 
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main className="container">
         <section>
           <h1>{test.title}</h1>
           <p>{test.description}</p>
           <p>
-            <Link className="button" to="/courses">
-              Volver a cursos
-            </Link>
+            <Button to="/courses">Volver a cursos</Button>
           </p>
 
           {result ? (
@@ -123,10 +122,7 @@ export default function TestViewPage({ user }) {
                   </div>
                 </div>
               ))}
-
-              <button className="button" type="submit">
-                Enviar respuestas
-              </button>
+              <Button type="submit">Enviar respuestas</Button>
             </form>
           )}
         </section>

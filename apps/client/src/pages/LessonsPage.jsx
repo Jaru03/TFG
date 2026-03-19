@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
+import Button from '../components/Button';
 
 export default function LessonsPage({ user }) {
   const { id } = useParams();
@@ -41,14 +42,12 @@ export default function LessonsPage({ user }) {
 
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main className="container">
         <section>
           <h1>Lecciones</h1>
           <p>
-            <Link className="button" to={`/courses/${id}`}>
-              Volver al curso
-            </Link>
+            <Button to={`/courses/${id}`}>Volver al curso</Button>
           </p>
 
           {error && <div className="alert alert-error">{error}</div>}
@@ -64,9 +63,7 @@ export default function LessonsPage({ user }) {
                 <label>Contenido</label>
                 <textarea value={content} onChange={e => setContent(e.target.value)} rows={4} />
               </div>
-              <button className="button" type="submit">
-                Guardar lección
-              </button>
+              <Button type="submit">Guardar lección</Button>
             </form>
           ) : null}
 

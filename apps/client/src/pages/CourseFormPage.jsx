@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
+import Button from '../components/Button';
 
 export default function CourseFormPage({ user }) {
   const [title, setTitle] = useState('');
@@ -54,7 +55,7 @@ export default function CourseFormPage({ user }) {
 
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main className="container">
         <section>
           <h1>{editId ? 'Editar curso' : 'Crear nuevo curso'}</h1>
@@ -83,12 +84,8 @@ export default function CourseFormPage({ user }) {
             </div>
 
             <div className="form-actions">
-              <button className="button" type="submit">
-                Guardar
-              </button>
-              <button className="button secondary" type="button" onClick={() => navigate('/courses')}>
-                Cancelar
-              </button>
+              <Button type="submit">Guardar</Button>
+              <Button variant="secondary" onClick={() => navigate('/courses')}>Cancelar</Button>
             </div>
           </form>
         </section>

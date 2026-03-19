@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
+import Button from '../components/Button';
 
 export default function CourseDetailPage({ user }) {
   const { id } = useParams();
@@ -37,7 +38,7 @@ export default function CourseDetailPage({ user }) {
   if (error) {
     return (
       <div className="container">
-        <Header user={user} />
+        <Header />
         <div className="alert alert-error">{error}</div>
       </div>
     );
@@ -45,7 +46,7 @@ export default function CourseDetailPage({ user }) {
 
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main className="container">
         <section>
           <h1>{course.title}</h1>
@@ -56,16 +57,14 @@ export default function CourseDetailPage({ user }) {
 
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
             {(user.role === 'profesor' || user.role === 'administrador') && (
-              <Link className="button" to={`/courses/create?edit=${course.id}`}>
-                Editar curso
-              </Link>
+              <Button to={`/courses/create?edit=${course.id}`}>Editar curso</Button>
             )}
           </div>
 
           <h2 style={{ marginTop: '2rem' }}>Lecciones</h2>
           {(user.role === 'profesor' || user.role === 'administrador') && (
             <p>
-              <Link className="button" to={`/courses/${id}/lessons`}>Gestionar lecciones</Link>
+              <Button to={`/courses/${id}/lessons`}>Gestionar lecciones</Button>
             </p>
           )}
           {lessons.length === 0 ? (
@@ -82,7 +81,7 @@ export default function CourseDetailPage({ user }) {
           <h2 style={{ marginTop: '2rem' }}>Tests</h2>
           {(user.role === 'profesor' || user.role === 'administrador') && (
             <p>
-              <Link className="button" to={`/courses/${id}/tests`}>Gestionar tests</Link>
+              <Button to={`/courses/${id}/tests`}>Gestionar tests</Button>
             </p>
           )}
           {tests.length === 0 ? (
@@ -94,9 +93,7 @@ export default function CourseDetailPage({ user }) {
                   <h3>{test.title}</h3>
                   <p>{test.description}</p>
                 </div>
-                <Link className="button" to={`/tests/${test.id}`}>
-                  Realizar test
-                </Link>
+                <Button to={`/tests/${test.id}`}>Realizar test</Button>
               </div>
             ))
           )}

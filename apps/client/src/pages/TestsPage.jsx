@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
+import Button from '../components/Button';
 
 export default function TestsPage({ user }) {
   const { id } = useParams();
@@ -41,14 +42,12 @@ export default function TestsPage({ user }) {
 
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main className="container">
         <section>
           <h1>Tests</h1>
           <p>
-            <Link className="button" to={`/courses/${id}`}>
-              Volver al curso
-            </Link>
+            <Button to={`/courses/${id}`}>Volver al curso</Button>
           </p>
 
           {error && <div className="alert alert-error">{error}</div>}
@@ -64,9 +63,7 @@ export default function TestsPage({ user }) {
                 <label>Descripción</label>
                 <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} />
               </div>
-              <button className="button" type="submit">
-                Guardar test
-              </button>
+              <Button type="submit">Guardar test</Button>
             </form>
           ) : null}
 
@@ -82,13 +79,9 @@ export default function TestsPage({ user }) {
                   <p>{test.description}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Link className="button" to={`/tests/${test.id}`}>
-                    Realizar
-                  </Link>
+                  <Button to={`/tests/${test.id}`}>Realizar</Button>
                   {(user.role === 'profesor' || user.role === 'administrador') && (
-                    <Link className="button secondary" to={`/tests/${test.id}/manage`}>
-                      Gestionar
-                    </Link>
+                    <Button variant="secondary" to={`/tests/${test.id}/manage`}>Gestionar</Button>
                   )}
                 </div>
               </div>

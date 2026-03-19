@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Header from '../components/Header';
+import Button from '../components/Button';
 
 export default function UsersAdminPage({ user }) {
   const [users, setUsers] = useState([]);
@@ -43,7 +44,7 @@ export default function UsersAdminPage({ user }) {
 
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main className="container">
         <section>
           <h1>Administración de usuarios</h1>
@@ -71,9 +72,7 @@ export default function UsersAdminPage({ user }) {
                         <option value="profesor">Profesor</option>
                         <option value="administrador">Administrador</option>
                       </select>
-                      <button className="button secondary" onClick={() => handleDelete(u.id)}>
-                        Eliminar
-                      </button>
+                      <Button variant="secondary" onClick={() => handleDelete(u.id)}>Eliminar</Button>
                     </div>
                   </div>
                 ))

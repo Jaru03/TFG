@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
+import Button from '../components/Button';
 
 export default function CoursesPage({ user }) {
   const [courses, setCourses] = useState([]);
@@ -23,15 +23,13 @@ export default function CoursesPage({ user }) {
 
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main className="container">
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1>Cursos</h1>
             {(user.role === 'profesor' || user.role === 'administrador') && (
-              <Link className="button" to="/courses/create">
-                Crear curso
-              </Link>
+              <Button to="/courses/create">Crear curso</Button>
             )}
           </div>
 
@@ -50,9 +48,7 @@ export default function CoursesPage({ user }) {
                 </p>
                 {(user.role === 'profesor' || user.role === 'administrador') && (
                   <div style={{ marginTop: '0.75rem' }}>
-                    <Link className="button" to={`/courses/create?edit=${course.id}`}>
-                      Editar
-                    </Link>
+                    <Button to={`/courses/create?edit=${course.id}`}>Editar</Button>
                   </div>
                 )}
               </div>

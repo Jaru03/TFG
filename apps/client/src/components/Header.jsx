@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import Button from './Button';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -24,9 +25,9 @@ export default function Header() {
                 Usuarios
               </Link>
             )}
-            <button className="button secondary" onClick={logout}>
+            <Button variant="secondary" onClick={logout}>
               Cerrar sesión
-            </button>
+            </Button>
           </nav>
         ) : null}
       </div>
