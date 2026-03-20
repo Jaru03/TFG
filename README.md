@@ -35,20 +35,35 @@ TFG/
 │   └── client/
 │       ├── src/
 │       │   ├── components/
-│       │   │   ├── Button.jsx     # Componente de botón centralizado
-│       │   │   └── Header.jsx
+│       │   │   ├── Button.jsx
+│       │   │   ├── Header.jsx        # Recibe user y logout como props
+│       │   │   └── Layout.jsx        # Shell: Header + <Outlet />
 │       │   ├── hooks/
-│       │   │   ├── useAuth.js        # Lógica de auth Google OAuth
-│       │   │   └── useAdminAuth.js   # Lógica de auth del backoffice
+│       │   │   ├── useAuth.js        # Instancia única en App.jsx
+│       │   │   └── useAdminAuth.js   # Auth independiente del backoffice
 │       │   └── pages/
 │       │       ├── admin/
-│       │       │   └── AdminPage.jsx  # Backoffice (login + gestión usuarios)
+│       │       │   ├── AdminPage.jsx       # Orquestador del backoffice
+│       │       │   ├── AdminPage.css       # Estilos (namespace admin-*)
+│       │       │   ├── AdminLogin.jsx
+│       │       │   ├── AdminSidebar.jsx
+│       │       │   ├── AdminTopbar.jsx
+│       │       │   ├── StatCard.jsx
+│       │       │   └── UsersSection.jsx    # Tabla + UserRow
 │       │       ├── courses/
-│       │       │   ├── CourseDetailPage.jsx
-│       │       │   ├── CourseFormPage.jsx
-│       │       │   └── CoursesPage.jsx
-│       │       ├── index.js           # Barrel de páginas
-│       │       └── ...
+│       │       │   ├── CoursesPage.jsx
+│       │       │   ├── CourseDetailPage.jsx    # Vista alumno
+│       │       │   ├── CourseDetailTeacher.jsx # Vista profesor/admin
+│       │       │   └── CourseFormPage.jsx
+│       │       ├── home/
+│       │       │   └── DashboardPage.jsx
+│       │       ├── LessonsPage.jsx
+│       │       ├── TestsPage.jsx
+│       │       ├── TestViewPage.jsx
+│       │       ├── TestManagePage.jsx
+│       │       ├── LoginPage.jsx
+│       │       ├── NotFoundPage.jsx
+│       │       └── index.js           # Barrel file
 │       └── vite.config.js
 ├── .env                  # Variables de entorno compartidas
 ├── docker-compose.yml    # Base de datos PostgreSQL
@@ -168,6 +183,30 @@ En Google Cloud Console configura:
   - `GET /api/users`
   - `PUT /api/users/:id`
   - `DELETE /api/users/:id`
+
+## 📋 Changelog
+
+### `refactor-ui`
+
+#### Routing y Layout
+- **Rutas anidadas con `<Outlet />`** — `Layout` migrado de `children` a `<Outlet />` de React Router. `ProtectedLayout` envuelve todas las rutas autenticadas y redirige a `/login` si no hay sesión.
+- **`/admin` fuera del `ProtectedLayout`** — Corregido bug por el que navegar a `/admin` sin sesión OAuth redirigía al login de usuario en lugar de mostrar el login del backoffice.
+- **Separación de vistas por rol en `/courses/:id`** — Renderiza `CourseDetailTeacher` para profesores/admins y `CourseDetailPage` para alumnos.
+
+#### `useAuth`
+- **Instancia única** — `useAuth()` solo se llama en `App.jsx`. El `user` y `logout` se pasan como props a `Layout` y `Header`, eliminando el parpadeo causado por múltiples instancias con estado independiente.
+- **Bucle infinito corregido** — El `useEffect` tenía `[user]` como dependencia, provocando re-fetch continuo. Corregido a `[]`.
+- **Logout simplificado** — Eliminado `redirect()` (solo válido en loaders/actions). `setUser(null)` provoca que `ProtectedLayout` redirija automáticamente.
+
+#### Header
+- Rediseñado con iconos de `lucide-react`.
+- Recibe `user` y `logout` como props en lugar de llamar a `useAuth()` directamente.
+
+#### Backoffice (`/admin`)
+- **Rediseño completo** — tema oscuro (`#0f172a`), sidebar fijo, topbar, tabla de usuarios con buscador en tiempo real y 4 tarjetas de estadísticas calculadas dinámicamente (Total, Alumnos, Profesores, Admins).
+- **Componentizado** en ficheros independientes dentro de `pages/admin/`: `AdminLogin`, `AdminSidebar`, `AdminTopbar`, `StatCard`, `UsersSection` (con `UserRow` interno).
+
+---
 
 ## 📦 Producción
 
