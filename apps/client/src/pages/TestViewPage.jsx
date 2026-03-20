@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import Header from '../components/Header';
 import Button from '../components/Button';
 
 export default function TestViewPage({ user }) {
@@ -55,7 +54,6 @@ export default function TestViewPage({ user }) {
   if (error) {
     return (
       <div className="container">
-        <Header />
         <div className="alert alert-error">{error}</div>
       </div>
     );
@@ -63,7 +61,6 @@ export default function TestViewPage({ user }) {
 
   return (
     <>
-      <Header />
       <main className="container">
         <section>
           <h1>{test.title}</h1>

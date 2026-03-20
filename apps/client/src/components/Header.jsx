@@ -1,33 +1,32 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import Button from './Button';
+import { BookOpen, Users, LogOut, GraduationCap } from 'lucide-react';
+import './Header.css';
 
-export default function Header() {
-  const { user, logout } = useAuth();
-
+export default function Header({ user, logout }) {
   return (
     <header className="header">
-      <div className="container">
-        <Link className="brand" to="/">
-          EduTech
+      <div className="header-container">
+        <Link to="/" className="header-brand">
+          <GraduationCap size={28} className="header-logo" />
+          <span>EduTech</span>
         </Link>
 
         {user ? (
-          <nav className="nav">
-            <span className="nav-text">
-              {user.name} ({user.role})
-            </span>
-            <Link className="nav-link" to="/courses">
-              Cursos
+          <nav className="header-nav">
+            <Link to="/courses" className="header-link">
+              <BookOpen size={18} />
+              <span>Cursos</span>
             </Link>
             {user.role === 'administrador' && (
-              <Link className="nav-link" to="/users">
-                Usuarios
+              <Link to="/users" className="header-link">
+                <Users size={18} />
+                <span>Usuarios</span>
               </Link>
             )}
-            <Button variant="secondary" onClick={logout}>
-              Cerrar sesión
-            </Button>
+            <span className="header-user">{user.name}</span>
+            <button onClick={logout} className="header-logout">
+              <LogOut size={18} />
+            </button>
           </nav>
         ) : null}
       </div>

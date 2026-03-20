@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "./hooks/useAuth";
+import Layout from "./components/Layout";
 import {
   AdminPage,
   CourseDetailPage,
@@ -18,60 +19,33 @@ import {
 axios.defaults.withCredentials = true;
 
 function App() {
-  const { user, checking } = useAuth();
+  const { user, checking, logout } = useAuth();
 
   if (checking) {
     return <div className="loading">Cargando...</div>;
   }
 
+  const ProtectedLayout = () => {
+    if (!user) return <Navigate to="/login" replace />;
+    return <Layout user={user} logout={logout} />;
+  };
+
   return (
     <Routes>
-      <Route
-        path="/"
-        element={user ? <DashboardPage user={user} /> : <LoginPage />}
-      />
-      <Route
-        path="/courses"
-        element={
-          user ? <CoursesPage user={user} /> : <Navigate to="/" replace />
-        }
-      />
-      <Route
-        path="/courses/create"
-        element={
-          user ? <CourseFormPage user={user} /> : <Navigate to="/" replace />
-        }
-      />
-      <Route
-        path="/courses/:id"
-        element={
-          user ? <CourseDetailPage user={user} /> : <Navigate to="/" replace />
-        }
-      />
-      <Route
-        path="/courses/:id/lessons"
-        element={
-          user ? <LessonsPage user={user} /> : <Navigate to="/" replace />
-        }
-      />
-      <Route
-        path="/courses/:id/tests"
-        element={user ? <TestsPage user={user} /> : <Navigate to="/" replace />}
-      />
-      <Route
-        path="/tests/:id"
-        element={
-          user ? <TestViewPage user={user} /> : <Navigate to="/" replace />
-        }
-      />
-      <Route
-        path="/tests/:id/manage"
-        element={
-          user ? <TestManagePage user={user} /> : <Navigate to="/" replace />
-        }
-      />
+      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
 
-      <Route path="/admin" element={<AdminPage />} />
+      <Route element={<ProtectedLayout />}>
+        <Route path="/" element={<DashboardPage user={user} />} />
+        <Route path="/courses" element={<CoursesPage user={user} />} />
+        <Route path="/courses/create" element={<CourseFormPage user={user} />} />
+        <Route path="/courses/:id" element={<CourseDetailPage user={user} />} />
+        <Route path="/courses/:id/lessons" element={<LessonsPage user={user} />} />
+        <Route path="/courses/:id/tests" element={<TestsPage user={user} />} />
+        <Route path="/tests/:id" element={<TestViewPage user={user} />} />
+        <Route path="/tests/:id/manage" element={<TestManagePage user={user} />} />
+        <Route path="/admin" element={<AdminPage />} />
+      </Route>
+
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
