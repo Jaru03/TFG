@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { BookOpen, FileText, User, ChevronRight, Play } from 'lucide-react';
-import Button from '../../components/Button';
+import { BookOpen, FileText, User, ChevronRight, Play, Lock, Check } from 'lucide-react';
 import './CourseDetailPage.css';
 
 export default function CourseDetailPage({ user }) {
@@ -10,20 +9,24 @@ export default function CourseDetailPage({ user }) {
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [tests, setTests] = useState([]);
+  const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [courseRes, lessonsRes, testsRes] = await Promise.all([
+        const [courseRes, lessonsRes, testsRes, enrollmentRes] = await Promise.all([
           axios.get(`/api/courses/${id}`),
           axios.get(`/api/courses/${id}/lessons`),
-          axios.get(`/api/courses/${id}/tests`)
+          axios.get(`/api/courses/${id}/tests`),
+          axios.get(`/api/courses/${id}/enrollment`)
         ]);
         setCourse(courseRes.data);
         setLessons(lessonsRes.data);
         setTests(testsRes.data);
+        setIsEnrolled(enrollmentRes.data.enrolled);
       } catch (err) {
         setError('Error al cargar el curso.');
       } finally {
@@ -31,6 +34,18 @@ export default function CourseDetailPage({ user }) {
       }
     })();
   }, [id]);
+
+  const handleEnroll = async () => {
+    setEnrolling(true);
+    try {
+      await axios.post(`/api/courses/${id}/enroll`);
+      setIsEnrolled(true);
+    } catch (err) {
+      setError('No se pudo completar la inscripción.');
+    } finally {
+      setEnrolling(false);
+    }
+  };
 
   if (loading) {
     return <div className="course-loading">Cargando...</div>;
@@ -43,8 +58,6 @@ export default function CourseDetailPage({ user }) {
       </div>
     );
   }
-
-  const isProfessor = user.role === 'profesor' || user.role === 'administrador';
 
   return (
     <div className="course-detail">
@@ -68,26 +81,29 @@ export default function CourseDetailPage({ user }) {
               </span>
             </div>
           </div>
-          <div className="course-cta">
-            <div className="course-cta-card">
-              <img src="https://img-c.udemycdn.com/course/480x270/6795483_a223_2.jpg?w=3840&q=75" alt={course.title} className="course-cta-image" />
-              <div className="course-cta-content">
-                <Button className="course-enroll-btn">Inscribirse</Button>
-                {isProfessor && (
-                  <Link to={`/courses/create?edit=${course.id}`} className="course-edit-link">
-                    Editar curso
-                  </Link>
-                )}
+          <div className="course-enroll">
+            {isEnrolled ? (
+              <div className="course-enrolled">
+                <Check size={20} />
+                <span>Inscrito</span>
               </div>
-            </div>
+            ) : (
+              <button
+                className="course-enroll-btn"
+                onClick={handleEnroll}
+                disabled={enrolling}
+              >
+                {enrolling ? 'Inscribiéndose...' : 'Inscribirse'}
+              </button>
+            )}
           </div>
         </div>
       </section>
 
       <section className="course-content">
-        <div className="course-content-grid">
-          <div className="course-main">
-            <h2>Contenido del curso</h2>
+        <h2>Contenido del curso</h2>
+        {isEnrolled ? (
+          <>
             {lessons.length === 0 ? (
               <div className="course-empty">No hay lecciones disponibles.</div>
             ) : (
@@ -121,24 +137,14 @@ export default function CourseDetailPage({ user }) {
                 </div>
               </>
             )}
+          </>
+        ) : (
+          <div className="course-locked">
+            <Lock size={48} />
+            <h3>Contenido bloqueado</h3>
+            <p>Inscríbete en el curso para acceder a las lecciones y tests.</p>
           </div>
-
-          {isProfessor && (
-            <div className="course-sidebar">
-              <h3>Gestionar</h3>
-              <div className="course-sidebar-links">
-                <Link to={`/courses/${id}/lessons`} className="course-sidebar-link">
-                  <BookOpen size={18} />
-                  <span>Lecciones</span>
-                </Link>
-                <Link to={`/courses/${id}/tests`} className="course-sidebar-link">
-                  <FileText size={18} />
-                  <span>Tests</span>
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </section>
     </div>
   );

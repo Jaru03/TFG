@@ -1,0 +1,174 @@
+.teacher-dashboard {
+  padding: 2rem 0;
+}
+
+.teacher-welcome {
+  margin-bottom: 2rem;
+}
+
+.teacher-welcome h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.5rem 0;
+}
+
+.teacher-welcome p {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.teacher-actions {
+  margin-bottom: 2rem;
+}
+
+.teacher-action-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: #0056b3;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  max-width: 400px;
+}
+
+.teacher-action-card:hover {
+  background: #004494;
+  transform: translateY(-2px);
+}
+
+.teacher-action-card svg {
+  color: #fff;
+}
+
+.teacher-action-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.25rem 0;
+}
+
+.teacher-action-card p {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.teacher-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.teacher-stats .stat-card {
+  flex: 1;
+}
+
+.teacher-courses {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.teacher-courses-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.teacher-courses-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.teacher-link {
+  font-size: 0.875rem;
+  color: #0056b3;
+  text-decoration: none;
+}
+
+.teacher-link:hover {
+  text-decoration: underline;
+}
+
+.teacher-courses-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.teacher-course-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  text-decoration: none;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background 0.15s;
+}
+
+.teacher-course-item:last-child {
+  border-bottom: none;
+}
+
+.teacher-course-item:hover {
+  background: #f9fafb;
+}
+
+.teacher-course-info h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 0.25rem 0;
+}
+
+.teacher-course-info p {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.teacher-course-item svg {
+  color: #9ca3af;
+}
+
+.teacher-loading,
+.teacher-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.teacher-empty p {
+  margin: 0 0 1rem 0;
+}
+
+@media (max-width: 640px) {
+  .teacher-welcome h1 {
+    font-size: 1.5rem;
+  }
+
+  .teacher-action-card {
+    padding: 1rem;
+  }
+
+  .teacher-stats {
+    flex-wrap: wrap;
+  }
+
+  .teacher-stats .stat-card {
+    flex: 1;
+    min-width: 140px;
+  }
+}

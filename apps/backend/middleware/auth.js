@@ -6,14 +6,14 @@ function isAuthenticated(req, res, next) {
   res.status(401).json({ message: 'No autenticado. Debes iniciar sesión.' });
 }
 
-function requireRole(role) {
+function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.isAuthenticated || !req.isAuthenticated()) {
       return res.status(401).json({ message: 'No autenticado. Debes iniciar sesión.' });
     }
 
     const userRole = req.user && req.user.role;
-    if (userRole === role || userRole === 'administrador') {
+    if (roles.includes(userRole) || userRole === 'administrador') {
       return next();
     }
 
