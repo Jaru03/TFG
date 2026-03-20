@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import Header from '../components/Header';
 import Button from '../components/Button';
 
 export default function TestsPage({ user }) {
@@ -42,7 +41,6 @@ export default function TestsPage({ user }) {
 
   return (
     <>
-      <Header />
       <main className="container">
         <section>
           <h1>Tests</h1>

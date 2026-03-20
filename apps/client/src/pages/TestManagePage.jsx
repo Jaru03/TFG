@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import Header from '../components/Header';
 import Button from '../components/Button';
 
 export default function TestManagePage({ user }) {
@@ -52,7 +51,6 @@ export default function TestManagePage({ user }) {
 
   return (
     <>
-      <Header />
       <main className="container">
         <section>
           <h1>Gestionar preguntas del test</h1>

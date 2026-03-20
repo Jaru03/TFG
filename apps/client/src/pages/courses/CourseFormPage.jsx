@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import Header from '../../components/Header';
 import Button from '../../components/Button';
 
 export default function CourseFormPage({ user }) {
@@ -55,7 +54,6 @@ export default function CourseFormPage({ user }) {
 
   return (
     <>
-      <Header />
       <main className="container">
         <section>
           <h1>{editId ? 'Editar curso' : 'Crear nuevo curso'}</h1>

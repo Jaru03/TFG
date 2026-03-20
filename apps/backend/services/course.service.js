@@ -10,7 +10,13 @@ async function listCourses() {
 }
 
 async function findCourseById(id) {
-  const rows = await query('SELECT * FROM courses WHERE id = $1', [id]);
+  const rows = await query(
+    `SELECT c.*, u.name AS instructor
+     FROM courses c
+     LEFT JOIN users u ON c.created_by = u.id
+     WHERE c.id = $1`,
+    [id]
+  );
   return rows[0] || null;
 }
 

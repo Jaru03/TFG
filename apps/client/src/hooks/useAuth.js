@@ -16,7 +16,7 @@ export function useAuth() {
         setChecking(false);
       }
     })();
-  }, [user]);
+  }, []);
 
   function login() {
     window.location.href = '/auth/google';
