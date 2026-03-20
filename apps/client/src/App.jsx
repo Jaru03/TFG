@@ -50,9 +50,9 @@ function App() {
         <Route path="/courses/:id/tests" element={<TestsPage user={user} />} />
         <Route path="/tests/:id" element={<TestViewPage user={user} />} />
         <Route path="/tests/:id/manage" element={<TestManagePage user={user} />} />
-        <Route path="/admin" element={<AdminPage />} />
       </Route>
 
+      <Route path="/admin" element={<AdminPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
