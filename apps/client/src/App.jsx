@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import {
   AdminPage,
   CourseDetailPage,
+  CourseDetailTeacher,
   CourseFormPage,
   CoursesPage,
   DashboardPage,
@@ -25,6 +26,8 @@ function App() {
     return <div className="loading">Cargando...</div>;
   }
 
+  const isProfessor = user && (user.role === 'profesor' || user.role === 'administrador');
+
   const ProtectedLayout = () => {
     if (!user) return <Navigate to="/login" replace />;
     return <Layout user={user} logout={logout} />;
@@ -38,7 +41,11 @@ function App() {
         <Route path="/" element={<DashboardPage user={user} />} />
         <Route path="/courses" element={<CoursesPage user={user} />} />
         <Route path="/courses/create" element={<CourseFormPage user={user} />} />
-        <Route path="/courses/:id" element={<CourseDetailPage user={user} />} />
+        <Route path="/courses/:id" element={
+          isProfessor 
+            ? <CourseDetailTeacher user={user} /> 
+            : <CourseDetailPage user={user} />
+        } />
         <Route path="/courses/:id/lessons" element={<LessonsPage user={user} />} />
         <Route path="/courses/:id/tests" element={<TestsPage user={user} />} />
         <Route path="/tests/:id" element={<TestViewPage user={user} />} />
