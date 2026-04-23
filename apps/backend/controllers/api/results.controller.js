@@ -19,17 +19,28 @@ async function submitTest(req, res) {
   const questionMap = new Map(questions.map(q => [q.id, q]));
 
   let score = 0;
-  answers.forEach(ans => {
+  const details = answers.map(ans => {
     const question = questionMap.get(ans.questionId);
-    if (!question) return;
-    if (String(ans.answer).trim().toUpperCase() === String(question.correct_option).trim().toUpperCase()) {
-      score += 1;
-    }
-  });
+    if (!question) return null;
+    const correct =
+      String(ans.answer).trim().toUpperCase() ===
+      String(question.correct_option).trim().toUpperCase();
+    if (correct) score += 1;
+    return {
+      questionId: question.id,
+      question:   question.question,
+      optionA:    question.option_a,
+      optionB:    question.option_b,
+      optionC:    question.option_c,
+      correctOption: question.correct_option,
+      yourAnswer: ans.answer || null,
+      correct,
+    };
+  }).filter(Boolean);
 
   await createResult({ userId: req.user.id, testId, score });
 
-  res.json({ score, total: questions.length });
+  res.json({ score, total: questions.length, details });
 }
 
 async function listMyResults(req, res) {
