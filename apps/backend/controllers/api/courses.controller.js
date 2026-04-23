@@ -6,6 +6,7 @@ const {
   deleteCourse: deleteCourseService,
   getTeacherStats,
   getCourseStats: getCourseStatsService,
+  getEnrolledCourses: getEnrolledCoursesService,
   enrollUser,
   isEnrolled
 } = require('../../services/course.service');
@@ -29,10 +30,13 @@ async function createCourse(req, res) {
     return res.status(400).json({ message: 'El título es obligatorio.' });
   }
 
+  const coverImage = req.file ? `/uploads/courses/${req.file.filename}` : null;
+
   const course = await createCourseService({
     title: title.trim(),
     description: description ? description.trim() : '',
-    createdBy: req.user.id
+    createdBy: req.user.id,
+    coverImage,
   });
 
   res.status(201).json(course);
@@ -44,7 +48,6 @@ async function updateCourse(req, res) {
     return res.status(404).json({ message: 'Curso no encontrado' });
   }
 
-  // Solo permite editar si es creador o admin
   if (req.user.role !== 'administrador' && course.created_by !== req.user.id) {
     return res.status(403).json({ message: 'No autorizado' });
   }
@@ -54,9 +57,12 @@ async function updateCourse(req, res) {
     return res.status(400).json({ message: 'El título es obligatorio.' });
   }
 
+  const coverImage = req.file ? `/uploads/courses/${req.file.filename}` : undefined;
+
   const updated = await updateCourseService(req.params.id, {
     title: title.trim(),
-    description: description ? description.trim() : ''
+    description: description ? description.trim() : '',
+    coverImage,
   });
 
   res.json(updated);
@@ -105,6 +111,11 @@ async function enroll(req, res) {
   }
 }
 
+async function listEnrolledCourses(req, res) {
+  const courses = await getEnrolledCoursesService(req.user.id);
+  res.json(courses);
+}
+
 async function checkEnrollment(req, res) {
   const enrolled = await isEnrolled(req.user.id, req.params.id);
   res.json({ enrolled });
@@ -118,6 +129,7 @@ module.exports = {
   deleteCourse,
   getStats,
   getCourseStats,
+  listEnrolledCourses,
   enroll,
   checkEnrollment
 };

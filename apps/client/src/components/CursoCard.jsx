@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
 import "./CursoCard.css";
 
-const CursoCard = ({ course, image }) => {
+const CursoCard = ({ course }) => {
   return (
     <Link to={`/courses/${course.id}`} className="curso-card">
-      <div className="curso-card-image">
-        <img src={image || "https://img-c.udemycdn.com/course/480x270/6795483_a223_2.jpg?w=3840&q=75"} alt={course.title} />
+      <div className={`curso-card-image ${!course.cover_image ? 'curso-card-image--placeholder' : ''}`}>
+        {course.cover_image
+          ? <img src={course.cover_image} alt={course.title} />
+          : <span className="curso-card-initials">{course.title.charAt(0).toUpperCase()}</span>
+        }
       </div>
       <div className="curso-card-content">
         <h3>{course.title}</h3>

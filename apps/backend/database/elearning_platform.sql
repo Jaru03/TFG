@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS courses (
   id SERIAL PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   description TEXT,
+  cover_image VARCHAR(255),
   created_by INT,
   created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
@@ -39,6 +40,19 @@ CREATE TABLE IF NOT EXISTS lessons (
   content TEXT,
   order_number INT DEFAULT 1,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Adjuntos de lecciones
+CREATE TABLE IF NOT EXISTS lesson_attachments (
+  id SERIAL PRIMARY KEY,
+  lesson_id INT NOT NULL,
+  type VARCHAR(20) NOT NULL CHECK (type IN ('image', 'video', 'file', 'video_url')),
+  filename VARCHAR(255),
+  original_name VARCHAR(255),
+  mime_type VARCHAR(100),
+  url VARCHAR(500),
+  created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+  FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
 );
 
 -- Tests

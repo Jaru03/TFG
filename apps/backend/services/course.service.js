@@ -20,16 +20,23 @@ async function findCourseById(id) {
   return rows[0] || null;
 }
 
-async function createCourse({ title, description, createdBy }) {
+async function createCourse({ title, description, createdBy, coverImage }) {
   const rows = await query(
-    'INSERT INTO courses (title, description, created_by) VALUES ($1, $2, $3) RETURNING id',
-    [title, description, createdBy]
+    'INSERT INTO courses (title, description, created_by, cover_image) VALUES ($1, $2, $3, $4) RETURNING id',
+    [title, description, createdBy, coverImage || null]
   );
   return findCourseById(rows[0].id);
 }
 
-async function updateCourse(id, { title, description }) {
-  await query('UPDATE courses SET title = $1, description = $2 WHERE id = $3', [title, description, id]);
+async function updateCourse(id, { title, description, coverImage }) {
+  if (coverImage !== undefined) {
+    await query(
+      'UPDATE courses SET title = $1, description = $2, cover_image = $3 WHERE id = $4',
+      [title, description, coverImage, id]
+    );
+  } else {
+    await query('UPDATE courses SET title = $1, description = $2 WHERE id = $3', [title, description, id]);
+  }
   return findCourseById(id);
 }
 
@@ -105,6 +112,18 @@ async function getCourseStats(courseId) {
   };
 }
 
+async function getEnrolledCourses(userId) {
+  return query(
+    `SELECT c.*, u.name AS instructor
+     FROM courses c
+     JOIN user_courses uc ON c.id = uc.course_id
+     LEFT JOIN users u ON c.created_by = u.id
+     WHERE uc.user_id = $1
+     ORDER BY uc.enrolled_at DESC`,
+    [userId]
+  );
+}
+
 async function enrollUser(userId, courseId) {
   await query(
     'INSERT INTO user_courses (user_id, course_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
@@ -128,6 +147,7 @@ module.exports = {
   deleteCourse,
   getTeacherStats,
   getCourseStats,
+  getEnrolledCourses,
   enrollUser,
   isEnrolled
 };
