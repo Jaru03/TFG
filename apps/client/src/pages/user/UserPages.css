@@ -1,0 +1,289 @@
+.user-page {
+  background: #f9fafb;
+  min-height: calc(100vh - 64px);
+}
+
+.user-page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.user-page-header {
+  margin-bottom: 2rem;
+}
+
+.user-page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 0.25rem;
+}
+
+.user-page-subtitle {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.user-page-loading {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+.user-page-empty {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+.user-page-empty p {
+  margin: 0 0 1rem;
+}
+
+.user-page-link {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  background: #1d4ed8;
+  color: #fff;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.user-page-link:hover {
+  background: #1e40af;
+}
+
+/* My Courses */
+.user-courses-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .user-courses-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .user-courses-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Progress */
+.progress-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.progress-stat-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.progress-stat-icon {
+  flex-shrink: 0;
+}
+
+.progress-stat-icon.green { color: #16a34a; }
+.progress-stat-icon.blue  { color: #2563eb; }
+.progress-stat-icon.purple { color: #7c3aed; }
+
+.progress-stat-card > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.progress-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+}
+
+.progress-stat-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.progress-courses {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.progress-course-block {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.progress-course-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 0;
+  background: #f3f4f6;
+}
+
+.progress-results-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.progress-result-row {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  gap: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.progress-result-row:last-child {
+  border-bottom: none;
+}
+
+.progress-test-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.progress-score {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #eff6ff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+}
+
+.progress-date {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  min-width: 90px;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .progress-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Account */
+.account-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  max-width: 600px;
+}
+
+.account-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+.account-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.account-field-icon {
+  color: #6b7280;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.account-field > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-field-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.1rem;
+}
+
+.account-field-value {
+  font-size: 0.95rem;
+  color: #111827;
+  font-weight: 500;
+}
+
+.account-role-badge {
+  display: inline-block;
+  padding: 0.2rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.account-role-badge.role-alumno {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.account-role-badge.role-profesor {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.account-role-badge.role-administrador {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+@media (max-width: 640px) {
+  .account-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .account-field {
+    justify-content: center;
+  }
+}

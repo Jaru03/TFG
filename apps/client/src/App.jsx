@@ -3,6 +3,7 @@ import axios from "axios";
 import { useAuth } from "./hooks/useAuth";
 import Layout from "./components/Layout";
 import {
+  AccountPage,
   AdminPage,
   CourseDetailPage,
   CourseDetailTeacher,
@@ -11,7 +12,9 @@ import {
   DashboardPage,
   LessonsPage,
   LoginPage,
+  MyCoursesPage,
   NotFoundPage,
+  ProgressPage,
   TestManagePage,
   TestsPage,
   TestViewPage,
@@ -50,6 +53,9 @@ function App() {
         <Route path="/courses/:id/tests" element={<TestsPage user={user} />} />
         <Route path="/tests/:id" element={<TestViewPage user={user} />} />
         <Route path="/tests/:id/manage" element={<TestManagePage user={user} />} />
+        <Route path="/my-courses" element={<MyCoursesPage user={user} />} />
+        <Route path="/progress" element={<ProgressPage user={user} />} />
+        <Route path="/account" element={<AccountPage user={user} logout={logout} />} />
       </Route>
 
       <Route path="/admin" element={<AdminPage />} />

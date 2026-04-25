@@ -10,3 +10,6 @@ export { default as NotFoundPage } from './NotFoundPage';
 export { default as TestManagePage } from './TestManagePage';
 export { default as TestsPage } from './TestsPage';
 export { default as TestViewPage } from './TestViewPage';
+export { default as AccountPage } from './user/AccountPage';
+export { default as MyCoursesPage } from './user/MyCoursesPage';
+export { default as ProgressPage } from './user/ProgressPage';

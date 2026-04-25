@@ -4,11 +4,11 @@ Plataforma e-learning full‑stack con **React + Vite** en el frontend y **Expre
 
 ## 🧩 Características principales
 
-- ✅ Autenticación con **Google OAuth 2.0** (Passport)
+- ✅ Autenticación con **Google OAuth 2.0** (Passport) con selección de rol en el registro
 - ✅ Control de acceso por roles (RBAC): **alumno**, **profesor**, **administrador**
 - ✅ CRUD completo de **cursos**, **lecciones**, **tests** y **preguntas**
 - ✅ Registro de resultados y calificaciones por usuario
-- ✅ Panel de administración para **gestionar usuarios** (listar, cambiar rol, borrar)
+- ✅ **Backoffice** independiente para administradores (`/admin`)
 - ✅ SPA React que consume la API (`/api/*`) con proxy integrado de Vite
 
 ## 🧰 Requisitos
@@ -21,16 +21,49 @@ Plataforma e-learning full‑stack con **React + Vite** en el frontend y **Expre
 ```
 TFG/
 ├── apps/
-│   ├── backend/          # Servidor Express + API REST
+│   ├── backend/
 │   │   ├── app.js
 │   │   ├── config/
 │   │   ├── controllers/
+│   │   │   └── admin.controller.js
 │   │   ├── database/
 │   │   ├── middleware/
+│   │   │   └── adminAuth.js
 │   │   ├── routes/
+│   │   │   └── admin.routes.js
 │   │   └── services/
-│   └── client/           # Aplicación React (Vite)
+│   └── client/
 │       ├── src/
+│       │   ├── components/
+│       │   │   ├── Button.jsx
+│       │   │   ├── Header.jsx        # Recibe user y logout como props
+│       │   │   └── Layout.jsx        # Shell: Header + <Outlet />
+│       │   ├── hooks/
+│       │   │   ├── useAuth.js        # Instancia única en App.jsx
+│       │   │   └── useAdminAuth.js   # Auth independiente del backoffice
+│       │   └── pages/
+│       │       ├── admin/
+│       │       │   ├── AdminPage.jsx       # Orquestador del backoffice
+│       │       │   ├── AdminPage.css       # Estilos (namespace admin-*)
+│       │       │   ├── AdminLogin.jsx
+│       │       │   ├── AdminSidebar.jsx
+│       │       │   ├── AdminTopbar.jsx
+│       │       │   ├── StatCard.jsx
+│       │       │   └── UsersSection.jsx    # Tabla + UserRow
+│       │       ├── courses/
+│       │       │   ├── CoursesPage.jsx
+│       │       │   ├── CourseDetailPage.jsx    # Vista alumno
+│       │       │   ├── CourseDetailTeacher.jsx # Vista profesor/admin
+│       │       │   └── CourseFormPage.jsx
+│       │       ├── home/
+│       │       │   └── DashboardPage.jsx
+│       │       ├── LessonsPage.jsx
+│       │       ├── TestsPage.jsx
+│       │       ├── TestViewPage.jsx
+│       │       ├── TestManagePage.jsx
+│       │       ├── LoginPage.jsx
+│       │       ├── NotFoundPage.jsx
+│       │       └── index.js           # Barrel file
 │       └── vite.config.js
 ├── .env                  # Variables de entorno compartidas
 ├── docker-compose.yml    # Base de datos PostgreSQL
@@ -43,8 +76,6 @@ Las dependencias de todos los workspaces se instalan en el `node_modules` raíz 
 ## 🚀 Configuración local (desarrollo)
 
 ### 1. Instalar dependencias
-
-Desde la raíz del proyecto (instala todo de una vez):
 
 ```bash
 npm install
@@ -72,6 +103,10 @@ GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
 
 # Frontend (para redirecciones tras login/logout)
 CLIENT_ORIGIN=http://localhost:5173
+
+# Backoffice admin
+ADMIN_USER=admin
+ADMIN_PASSWORD=tu_contraseña_segura
 ```
 
 ### 3. Arrancar la base de datos
@@ -80,9 +115,9 @@ CLIENT_ORIGIN=http://localhost:5173
 docker compose up -d
 ```
 
-Esto levanta PostgreSQL 17 en el puerto `5434` e inicializa el esquema automáticamente.
+Levanta PostgreSQL 17 en el puerto `5434` e inicializa el esquema automáticamente.
 
-### 4. Arrancar backend y frontend en paralelo
+### 4. Arrancar backend y frontend
 
 ```bash
 npm run dev
@@ -90,6 +125,25 @@ npm run dev
 
 - Backend (API): http://localhost:3000
 - Frontend (React): http://localhost:5173
+- Backoffice admin: http://localhost:5173/admin
+
+## 👤 Registro y roles
+
+En la pantalla de login el usuario elige cómo registrarse:
+
+- **Entrar como Alumno** → cuenta creada con rol `alumno`
+- **Registrarme como Profesor** → cuenta creada con rol `profesor`
+
+El rol solo se asigna en el **primer acceso**. Si el usuario ya existe, el rol no cambia.
+
+## 🔐 Backoffice (`/admin`)
+
+Acceso independiente del OAuth de Google, protegido por usuario y contraseña definidos en `.env`.
+
+Desde el backoffice el administrador puede:
+- Listar todos los usuarios
+- Cambiar el rol de cualquier usuario
+- Eliminar usuarios
 
 ## 🔌 Google OAuth — URIs autorizadas
 
@@ -101,9 +155,14 @@ En Google Cloud Console configura:
 ## 🔌 API — Endpoints principales
 
 - **Autenticación**
-  - `GET /auth/google` → inicia login con Google
+  - `GET /auth/google?role=alumno|profesor` → inicia login con Google
   - `GET /auth/google/callback` → callback OAuth
   - `GET /auth/logout` → cerrar sesión
+
+- **Admin backoffice**
+  - `POST /api/admin/login` → login con credenciales del `.env`
+  - `POST /api/admin/logout`
+  - `GET /api/admin/me`
 
 - **Cursos**
   - `GET /api/courses`
@@ -120,18 +179,39 @@ En Google Cloud Console configura:
   - `POST /api/courses/:courseId/tests` (propietario)
   - `POST /api/tests/:testId/submit`
 
-- **Usuarios (admin)**
+- **Usuarios**
   - `GET /api/users`
-  - `PUT /api/users/:id/role`
+  - `PUT /api/users/:id`
   - `DELETE /api/users/:id`
+
+## 📋 Changelog
+
+### `refactor-ui`
+
+#### Routing y Layout
+- **Rutas anidadas con `<Outlet />`** — `Layout` migrado de `children` a `<Outlet />` de React Router. `ProtectedLayout` envuelve todas las rutas autenticadas y redirige a `/login` si no hay sesión.
+- **`/admin` fuera del `ProtectedLayout`** — Corregido bug por el que navegar a `/admin` sin sesión OAuth redirigía al login de usuario en lugar de mostrar el login del backoffice.
+- **Separación de vistas por rol en `/courses/:id`** — Renderiza `CourseDetailTeacher` para profesores/admins y `CourseDetailPage` para alumnos.
+
+#### `useAuth`
+- **Instancia única** — `useAuth()` solo se llama en `App.jsx`. El `user` y `logout` se pasan como props a `Layout` y `Header`, eliminando el parpadeo causado por múltiples instancias con estado independiente.
+- **Bucle infinito corregido** — El `useEffect` tenía `[user]` como dependencia, provocando re-fetch continuo. Corregido a `[]`.
+- **Logout simplificado** — Eliminado `redirect()` (solo válido en loaders/actions). `setUser(null)` provoca que `ProtectedLayout` redirija automáticamente.
+
+#### Header
+- Rediseñado con iconos de `lucide-react`.
+- Recibe `user` y `logout` como props en lugar de llamar a `useAuth()` directamente.
+
+#### Backoffice (`/admin`)
+- **Rediseño completo** — tema oscuro (`#0f172a`), sidebar fijo, topbar, tabla de usuarios con buscador en tiempo real y 4 tarjetas de estadísticas calculadas dinámicamente (Total, Alumnos, Profesores, Admins).
+- **Componentizado** en ficheros independientes dentro de `pages/admin/`: `AdminLogin`, `AdminSidebar`, `AdminTopbar`, `StatCard`, `UsersSection` (con `UserRow` interno).
+
+---
 
 ## 📦 Producción
 
 ```bash
-# Build del frontend
 npm run client:build
-
-# Arrancar en producción (el backend sirve el build de React)
 npm -w edutech run start
 ```
 

@@ -24,6 +24,21 @@
   object-fit: cover;
 }
 
+.curso-card-image--placeholder {
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.curso-card-initials {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #3b82f6;
+  opacity: 0.6;
+  user-select: none;
+}
+
 .curso-card-content {
   padding: 1rem;
 }

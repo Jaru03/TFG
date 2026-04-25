@@ -21,17 +21,30 @@ const apiResultsRoutes = require('./routes/api/results.routes');
 
 const app = express();
 
-// CORS (solo para desarrollo con Vite)
+// CORS — acepta localhost y dominios ngrok dinámicamente
+const ALLOWED_ORIGINS = [
+  process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  'http://localhost:5173',
+];
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
-    credentials: true
+    origin(origin, cb) {
+      if (!origin) return cb(null, true); // same-origin / curl
+      if (ALLOWED_ORIGINS.includes(origin) || /\.ngrok(-free)?\.app$/.test(origin) || /\.ngrok\.dev$/.test(origin)) {
+        return cb(null, true);
+      }
+      cb(new Error(`CORS blocked: ${origin}`));
+    },
+    credentials: true,
   })
 );
 
 // Body parsing
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+// Static uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Session
 app.use(session(sessionConfig));
@@ -45,7 +58,9 @@ app.use(passport.session());
 app.use('/api/auth', apiAuthRoutes);
 app.use('/api/courses', apiCourseRoutes);
 app.use('/api/courses/:courseId/lessons', apiLessonsRoutes);
+app.use('/api/lessons', apiLessonsRoutes);
 app.use('/api/courses/:courseId/tests', apiTestsRoutes);
+app.use('/api/tests', apiTestsRoutes);
 app.use('/api/tests/:testId/questions', apiQuestionsRoutes);
 app.use('/api/users', apiUsersRoutes);
 app.use('/api/results', apiResultsRoutes);
