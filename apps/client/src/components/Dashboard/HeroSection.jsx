@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { coursesApi } from '../../api';
 import {
   ChevronRight, GraduationCap, Zap, Users,
   MonitorPlay, BarChart2, Clock,
 } from 'lucide-react';
 import CursoCard from '../CursoCard';
+import Loading from '../Loading';
 import './HeroSection.css';
 
 const FEATURES = [
@@ -26,20 +27,16 @@ const FEATURES = [
   },
 ];
 
-export default function HeroSection({ user }) {
-  const [enrolled, setEnrolled] = useState([]);
-  const [allCourses, setAll]    = useState([]);
-  const [loading, setLoading]   = useState(true);
-
-  useEffect(() => {
-    Promise.all([
-      axios.get('/api/courses/enrolled'),
-      axios.get('/api/courses'),
-    ]).then(([enrRes, allRes]) => {
-      setEnrolled(enrRes.data);
-      setAll(allRes.data);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+export default function HeroSection() {
+  const { data: enrolled = [], isLoading: loadingEnrolled } = useQuery({
+    queryKey: ['courses', 'enrolled'],
+    queryFn: coursesApi.enrolled,
+  });
+  const { data: allCourses = [], isLoading: loadingAll } = useQuery({
+    queryKey: ['courses'],
+    queryFn: coursesApi.list,
+  });
+  const loading = loadingEnrolled || loadingAll;
 
   const explore = allCourses.filter(c => !enrolled.find(e => e.id === c.id)).slice(0, 4);
 
@@ -114,7 +111,7 @@ export default function HeroSection({ user }) {
           ))}
         </div>
 
-        {loading && <div className="hs-loading">Cargando…</div>}
+        {loading && <Loading />}
 
         {/* ── Mis cursos ── */}
         {!loading && enrolled.length > 0 && (

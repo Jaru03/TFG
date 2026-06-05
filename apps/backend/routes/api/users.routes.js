@@ -1,11 +1,14 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express';
+import { isAuthenticated, requireRole } from '../../middleware/auth.js';
+import { validateBody } from '../../middleware/validate.js';
+import { changeRoleSchema } from '../../validators/schemas.js';
+import usersController from '../../controllers/api/users.controller.js';
 
-const { isAuthenticated, requireRole } = require('../../middleware/auth');
-const { listUsers, changeUserRole, deleteUser } = require('../../controllers/api/users.controller');
+const router = express.Router();
+const { listUsers, changeUserRole, deleteUser } = usersController;
 
 router.get('/', isAuthenticated, requireRole('administrador'), listUsers);
-router.put('/:id', isAuthenticated, requireRole('administrador'), changeUserRole);
+router.put('/:id', isAuthenticated, requireRole('administrador'), validateBody(changeRoleSchema), changeUserRole);
 router.delete('/:id', isAuthenticated, requireRole('administrador'), deleteUser);
 
-module.exports = router;
+export default router;

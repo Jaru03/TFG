@@ -1,7 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { testsApi, resultsApi } from '../api';
 import { ArrowLeft, CheckCircle2, XCircle, Check, X } from 'lucide-react';
+import Loading from '../components/Loading';
+import EmptyState from '../components/EmptyState';
 import './TestViewPage.css';
 
 const PAGE_SIZE = 10;
@@ -30,6 +33,7 @@ function ReviewQuestion({ d, index }) {
           {index + 1}
         </span>
         <p className="review-q-text">{d.question}</p>
+        {d.points != null && <span className="review-q-points">{d.points} pts</span>}
         {d.correct
           ? <CheckCircle2 size={18} className="review-status ok" />
           : <XCircle     size={18} className="review-status wrong" />}
@@ -70,32 +74,47 @@ function ReviewQuestion({ d, index }) {
 // ── Main ───────────────────────────────────────────────────────────────────
 export default function TestViewPage() {
   const { id } = useParams();
-  const [test, setTest]           = useState(null);
-  const [questions, setQuestions] = useState([]);
+  const queryClient = useQueryClient();
   const [answers, setAnswers]     = useState({});
   const [result, setResult]       = useState(null);
   const [page, setPage]           = useState(0);
-  const [loading, setLoading]     = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError]         = useState(null);
   const [showReview, setShowReview] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [testRes, qRes] = await Promise.all([
-          axios.get(`/api/tests/${id}`),
-          axios.get(`/api/tests/${id}/questions`),
-        ]);
-        setTest(testRes.data);
-        setQuestions(qRes.data);
-      } catch {
-        setError('No se pudo cargar el test.');
-      } finally {
-        setLoading(false);
+  const { data: test, isLoading: loadingTest, error: loadError } = useQuery({
+    queryKey: ['tests', id],
+    queryFn: () => testsApi.get(id),
+  });
+  const { data: questions = [], isLoading: loadingQuestions } = useQuery({
+    queryKey: ['tests', id, 'questions'],
+    queryFn: () => testsApi.questions(id),
+  });
+  const { data: attempts } = useQuery({
+    queryKey: ['results', id, 'attempts'],
+    queryFn: () => resultsApi.attempts(id),
+  });
+
+  const loading = loadingTest || loadingQuestions;
+
+  const submitMutation = useMutation({
+    mutationFn: (payload) => resultsApi.submit(id, payload),
+    onSuccess: (data) => {
+      setResult(data);
+      if (data.attemptsRemaining !== undefined) {
+        // Refleja los intentos restantes en la caché sin volver a pedirlos.
+        queryClient.setQueryData(['results', id, 'attempts'], {
+          used: data.maxAttempts - data.attemptsRemaining,
+          max: data.maxAttempts,
+          remaining: data.attemptsRemaining,
+        });
       }
-    })();
-  }, [id]);
+      setShowReview(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    onError: (err) => setError(err.response?.data?.message || 'Error al enviar el test. Inténtalo de nuevo.'),
+  });
+
+  const noAttemptsLeft = attempts && attempts.remaining <= 0;
 
   const totalPages    = Math.ceil(questions.length / PAGE_SIZE);
   const isMultiPage   = questions.length > PAGE_SIZE;
@@ -124,30 +143,20 @@ export default function TestViewPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
-    try {
-      const payload = {
-        answers: questions.map(q => ({ questionId: q.id, answer: answers[q.id] || '' })),
-      };
-      const res = await axios.post(`/api/results/tests/${id}/submit`, payload);
-      setResult(res.data);
-      setShowReview(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch {
-      setError('Error al enviar el test. Inténtalo de nuevo.');
-    } finally {
-      setSubmitting(false);
-    }
+    const payload = {
+      answers: questions.map(q => ({ questionId: q.id, answer: answers[q.id] || '' })),
+    };
+    submitMutation.mutate(payload);
   };
 
   // ── Loading / Error ──
-  if (loading) return <div className="test-shell"><div className="test-loading">Cargando test…</div></div>;
-  if (error && !test) return <div className="test-shell"><div className="test-error">{error}</div></div>;
+  if (loading) return <div className="test-shell"><Loading message="Cargando test…" /></div>;
+  if (loadError && !test) return <div className="test-shell"><div className="test-error">No se pudo cargar el test.</div></div>;
 
-  const pct = result ? Math.round((result.score / result.total) * 100) : 0;
+  const pct = result && result.max > 0 ? Math.round((result.score / result.max) * 100) : 0;
   const wrongCount = result ? result.details.filter(d => !d.correct).length : 0;
 
   // ── Result screen ──
@@ -167,7 +176,7 @@ export default function TestViewPage() {
           <div className={`test-result ${scoreClass(pct)}`}>
             <div className="result-score-wrap">
               <span className="result-fraction">
-                {result.score}<span className="result-total"> / {result.total}</span>
+                {result.score}<span className="result-total"> / {result.max} pts</span>
               </span>
               <span className="result-pct">{pct}%</span>
             </div>
@@ -178,7 +187,7 @@ export default function TestViewPage() {
 
             <div className="result-meta">
               <span className="result-meta-item result-meta-ok">
-                <CheckCircle2 size={14} /> {result.score} correctas
+                <CheckCircle2 size={14} /> {result.correct} de {result.total} correctas
               </span>
               {wrongCount > 0 && (
                 <span className="result-meta-item result-meta-wrong">
@@ -197,13 +206,18 @@ export default function TestViewPage() {
               >
                 {showReview ? 'Ocultar revisión' : 'Ver mis respuestas'}
               </button>
-              <button
-                className="result-btn-ghost"
-                onClick={() => { setResult(null); setAnswers({}); setPage(0); window.scrollTo({ top: 0 }); }}
-              >
-                Reintentar
-              </button>
+              {!noAttemptsLeft && (
+                <button
+                  className="result-btn-ghost"
+                  onClick={() => { setResult(null); setAnswers({}); setPage(0); window.scrollTo({ top: 0 }); }}
+                >
+                  Reintentar{attempts ? ` (${attempts.remaining} ${attempts.remaining === 1 ? 'intento' : 'intentos'})` : ''}
+                </button>
+              )}
             </div>
+            {noAttemptsLeft && (
+              <p className="result-attempts-spent">Has agotado tus {attempts.max} intentos para este test.</p>
+            )}
           </div>
 
           {/* Review section */}
@@ -236,6 +250,13 @@ export default function TestViewPage() {
         <header className="test-header">
           <h1>{test.title}</h1>
           {test.description && <p className="test-description">{test.description}</p>}
+          {attempts && (
+            <span className={`test-attempts ${noAttemptsLeft ? 'test-attempts--none' : ''}`}>
+              {noAttemptsLeft
+                ? 'Sin intentos restantes'
+                : `Te quedan ${attempts.remaining} de ${attempts.max} intentos`}
+            </span>
+          )}
         </header>
 
         {/* Global progress */}
@@ -254,8 +275,10 @@ export default function TestViewPage() {
           </div>
         </div>
 
-        {questions.length === 0 ? (
-          <div className="test-empty">Este test no tiene preguntas todavía.</div>
+        {noAttemptsLeft ? (
+          <EmptyState boxed message={`Has agotado tus ${attempts.max} intentos para este test. No puedes volver a realizarlo.`} />
+        ) : questions.length === 0 ? (
+          <EmptyState boxed message="Este test no tiene preguntas todavía." />
         ) : (
           <form onSubmit={handleSubmit}>
             {/* Page range label */}
@@ -314,8 +337,8 @@ export default function TestViewPage() {
                       {questions.length - answeredCount} sin responder
                     </p>
                   )}
-                  <button type="submit" className="test-submit-btn" disabled={submitting}>
-                    {submitting ? 'Enviando…' : 'Enviar respuestas'}
+                  <button type="submit" className="test-submit-btn" disabled={submitMutation.isPending}>
+                    {submitMutation.isPending ? 'Enviando…' : 'Enviar respuestas'}
                   </button>
                 </div>
               )}

@@ -1,0 +1,118 @@
+.students-progress {
+  overflow-x: auto;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-lg);
+  background: var(--clr-surface);
+  box-shadow: var(--sh-sm);
+}
+
+.students-progress-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.students-progress-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--clr-text-3);
+  background: var(--clr-border-soft);
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.students-progress-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--clr-border-soft);
+  color: var(--clr-text-2);
+  vertical-align: middle;
+}
+
+.students-progress-table tr:last-child td { border-bottom: none; }
+
+.sp-student-name {
+  font-weight: 600;
+  color: var(--clr-text-1);
+}
+
+.sp-student-email {
+  font-size: 0.78rem;
+  color: var(--clr-text-3);
+}
+
+.sp-progress-col { width: 30%; }
+
+.sp-progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sp-progress-track {
+  flex: 1;
+  height: 6px;
+  background: var(--clr-border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.sp-progress-fill {
+  height: 100%;
+  background: var(--clr-accent, #6366f1);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.sp-progress-fill.done { background: var(--clr-success); }
+
+.sp-progress-pct {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--clr-text-2);
+  flex-shrink: 0;
+  min-width: 34px;
+  text-align: right;
+}
+
+/* ── Paginación ── */
+.students-progress-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.sp-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--clr-text-2, #4b5563);
+  background: var(--clr-surface, #fff);
+  border: 1px solid var(--clr-border, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.sp-page-btn:hover:not(:disabled) {
+  border-color: var(--clr-accent, #6366f1);
+  color: var(--clr-accent-dark, #4f46e5);
+}
+
+.sp-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sp-page-info {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--clr-text-3, #9ca3af);
+}

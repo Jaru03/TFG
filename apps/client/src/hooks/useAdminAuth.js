@@ -1,34 +1,32 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { adminApi } from '../api';
 
 export function useAdminAuth() {
-  const [admin, setAdmin] = useState(null);
-  const [checking, setChecking] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    (async () => {
+  const { data: admin, isLoading: checking } = useQuery({
+    queryKey: ['admin', 'me'],
+    queryFn: async () => {
       try {
-        const res = await axios.get('/api/admin/me');
-        setAdmin(res.data);
+        return await adminApi.me();
       } catch {
-        setAdmin(null);
-      } finally {
-        setChecking(false);
+        return null;
       }
-    })();
-  }, []);
+    },
+    staleTime: Infinity,
+  });
 
   async function login(username, password) {
-    const res = await axios.post('/api/admin/login', { username, password });
-    if (res.data.ok) {
-      setAdmin({ username });
+    const data = await adminApi.login({ username, password });
+    if (data.ok) {
+      queryClient.setQueryData(['admin', 'me'], { username });
     }
   }
 
   async function logout() {
-    await axios.post('/api/admin/logout');
-    setAdmin(null);
+    await adminApi.logout();
+    queryClient.setQueryData(['admin', 'me'], null);
   }
 
-  return { admin, checking, login, logout };
+  return { admin: admin ?? null, checking, login, logout };
 }

@@ -1,12 +1,30 @@
-const { query } = require('../config/db');
-const fs = require('fs');
-const path = require('path');
+import prisma from '../config/prisma.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function toAttachment(p) {
+  if (!p) return null;
+  return {
+    id: p.id,
+    lesson_id: p.lessonId,
+    type: p.type,
+    filename: p.filename,
+    original_name: p.originalName,
+    mime_type: p.mimeType,
+    url: p.url,
+    created_at: p.createdAt,
+  };
+}
 
 async function listAttachmentsByLesson(lessonId) {
-  return query(
-    'SELECT * FROM lesson_attachments WHERE lesson_id = $1 ORDER BY created_at ASC',
-    [lessonId]
-  );
+  const attachments = await prisma.lessonAttachment.findMany({
+    where: { lessonId: Number(lessonId) },
+    orderBy: { createdAt: 'asc' },
+  });
+  return attachments.map(toAttachment);
 }
 
 async function createFileAttachment({ lessonId, filename, originalName, mimeType, url }) {
@@ -14,26 +32,19 @@ async function createFileAttachment({ lessonId, filename, originalName, mimeType
     : mimeType.startsWith('video/') ? 'video'
     : 'file';
 
-  const rows = await query(
-    `INSERT INTO lesson_attachments (lesson_id, type, filename, original_name, mime_type, url)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [lessonId, type, filename, originalName, mimeType, url]
-  );
-  return rows[0];
+  return toAttachment(await prisma.lessonAttachment.create({
+    data: { lessonId: Number(lessonId), type, filename, originalName, mimeType, url },
+  }));
 }
 
 async function createVideoUrlAttachment({ lessonId, url }) {
-  const rows = await query(
-    `INSERT INTO lesson_attachments (lesson_id, type, url)
-     VALUES ($1, 'video_url', $2) RETURNING *`,
-    [lessonId, url]
-  );
-  return rows[0];
+  return toAttachment(await prisma.lessonAttachment.create({
+    data: { lessonId: Number(lessonId), type: 'video_url', url },
+  }));
 }
 
 async function deleteAttachment(id) {
-  const rows = await query('SELECT * FROM lesson_attachments WHERE id = $1', [id]);
-  const attachment = rows[0];
+  const attachment = await prisma.lessonAttachment.findUnique({ where: { id: Number(id) } });
   if (!attachment) return;
 
   if (attachment.filename) {
@@ -41,12 +52,7 @@ async function deleteAttachment(id) {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
 
-  await query('DELETE FROM lesson_attachments WHERE id = $1', [id]);
+  await prisma.lessonAttachment.delete({ where: { id: Number(id) } });
 }
 
-module.exports = {
-  listAttachmentsByLesson,
-  createFileAttachment,
-  createVideoUrlAttachment,
-  deleteAttachment,
-};
+export { listAttachmentsByLesson, createFileAttachment, createVideoUrlAttachment, deleteAttachment };

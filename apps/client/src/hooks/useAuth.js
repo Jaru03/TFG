@@ -1,31 +1,30 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { authApi } from '../api';
 
 export function useAuth() {
-  const [user, setUser] = useState(null);
-  const [checking, setChecking] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    (async () => {
+  const { data: user, isLoading: checking } = useQuery({
+    queryKey: ['auth', 'me'],
+    // Un 401 significa "no logueado": lo tratamos como user=null, no como error.
+    queryFn: async () => {
       try {
-        const res = await axios.get('/api/auth/me');
-        setUser(res.data);
+        return await authApi.me();
       } catch {
-        setUser(null);
-      } finally {
-        setChecking(false);
+        return null;
       }
-    })();
-  }, []);
+    },
+    staleTime: Infinity, // la sesión no cambia por sí sola
+  });
 
   function login() {
-    window.location.href = '/auth/google';
+    window.location.href = authApi.loginUrl;
   }
 
-  async function logout() {
-    await axios.get('/auth/logout');
-    setUser(null);
+  function logout() {
+    queryClient.clear();
+    window.location.href = authApi.logoutUrl;
   }
 
-  return { user, checking, login, logout };
+  return { user: user ?? null, checking, login, logout };
 }

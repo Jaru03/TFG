@@ -1,0 +1,24 @@
+# Dependencias y artefactos (se instalan/compilan dentro de la imagen).
+**/node_modules
+**/dist
+
+# Secretos y entorno (se inyectan vía docker-compose, no en la imagen).
+.env
+.env.*
+
+# Subidas locales (se persisten con un volumen en producción).
+apps/backend/uploads
+
+# Control de versiones y documentación.
+.git
+.gitignore
+docs
+README.md
+*.pdf
+*.docx
+
+# Logs y ficheros del sistema.
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

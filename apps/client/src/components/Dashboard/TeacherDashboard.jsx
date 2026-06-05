@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { coursesApi } from '../../api';
 import { Plus, ChevronRight, BookOpen, Users, ClipboardCheck } from 'lucide-react';
+import Loading from '../Loading';
+import EmptyState from '../EmptyState';
 import './TeacherDashboard.css';
 
 function greeting(name) {
@@ -15,19 +17,16 @@ function todayLabel() {
 }
 
 export default function TeacherDashboard({ user }) {
-  const [courses, setCourses] = useState([]);
-  const [stats, setStats]     = useState({ courses: 0, students: 0, testsCompleted: 0 });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([
-      axios.get('/api/courses'),
-      axios.get('/api/courses/stats'),
-    ]).then(([coursesRes, statsRes]) => {
-      setCourses(coursesRes.data.filter(c => c.created_by === user.id));
-      setStats(statsRes.data);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [user.id]);
+  const { data: allCourses = [], isLoading: loadingCourses } = useQuery({
+    queryKey: ['courses'],
+    queryFn: coursesApi.list,
+  });
+  const { data: stats = { courses: 0, students: 0, testsCompleted: 0 }, isLoading: loadingStats } = useQuery({
+    queryKey: ['courses', 'stats'],
+    queryFn: coursesApi.teacherStats,
+  });
+  const courses = allCourses.filter(c => c.created_by === user.id);
+  const loading = loadingCourses || loadingStats;
 
   return (
     <div className="td-shell">
@@ -73,12 +72,13 @@ export default function TeacherDashboard({ user }) {
 
       {/* ── Courses ── */}
       {loading ? (
-        <div className="td-loading">Cargando…</div>
+        <Loading />
       ) : courses.length === 0 ? (
-        <div className="td-empty">
-          <p>No has creado ningún curso todavía.</p>
-          <Link to="/courses/create" className="td-create-link">Crear tu primer curso</Link>
-        </div>
+        <EmptyState
+          boxed
+          message="No has creado ningún curso todavía."
+          action={<Link to="/courses/create" className="td-create-link">Crear tu primer curso</Link>}
+        />
       ) : (
         <div className="td-courses">
           <div className="td-courses-header">

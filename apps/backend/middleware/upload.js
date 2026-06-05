@@ -1,38 +1,36 @@
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-// ── Lessons ──────────────────────────────────────────────────────────────────
-const LESSONS_DIR = path.join(__dirname, '..', 'uploads', 'lessons');
-if (!fs.existsSync(LESSONS_DIR)) fs.mkdirSync(LESSONS_DIR, { recursive: true });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 
-const lessonsStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, LESSONS_DIR),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
+// Crea un storage de disco apuntando a uploads/<subdir>, creando la carpeta si
+// no existe. El nombre de fichero se sanea y se prefija con un timestamp para
+// evitar colisiones. Compartido por lecciones y portadas de curso.
+function makeDiskStorage(subdir) {
+  const dir = path.join(UPLOADS_DIR, subdir);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
+  return multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, dir),
+    filename: (_req, file, cb) => {
+      const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      cb(null, `${Date.now()}-${safe}`);
+    },
+  });
+}
+
+// Adjuntos de lecciones: cualquier tipo, hasta 50 MB.
 const upload = multer({
-  storage: lessonsStorage,
+  storage: makeDiskStorage('lessons'),
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-// ── Courses (cover image) ─────────────────────────────────────────────────────
-const COURSES_DIR = path.join(__dirname, '..', 'uploads', 'courses');
-if (!fs.existsSync(COURSES_DIR)) fs.mkdirSync(COURSES_DIR, { recursive: true });
-
-const coursesStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, COURSES_DIR),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
-
+// Portada de curso: solo imágenes, hasta 5 MB.
 const courseUpload = multer({
-  storage: coursesStorage,
+  storage: makeDiskStorage('courses'),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
@@ -40,4 +38,4 @@ const courseUpload = multer({
   },
 });
 
-module.exports = { upload, courseUpload };
+export { upload, courseUpload };

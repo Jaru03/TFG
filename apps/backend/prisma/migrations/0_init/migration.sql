@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS tests (
   course_id INT NOT NULL,
   title VARCHAR(255) NOT NULL,
   description TEXT,
+  max_score NUMERIC(5,2) NOT NULL DEFAULT 10, -- valor total del test, configurable por el profesor
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS questions (
   option_b VARCHAR(255) NOT NULL,
   option_c VARCHAR(255) NOT NULL,
   correct_option CHAR(1) NOT NULL,
+  points NUMERIC(5,2), -- valor custom de la pregunta; NULL = reparto automático
   FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -81,10 +83,20 @@ CREATE TABLE IF NOT EXISTS results (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL,
   test_id INT NOT NULL,
-  score INT NOT NULL,
+  score NUMERIC(5,2) NOT NULL, -- nota sobre 10, repartida entre las preguntas
   completed_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Progreso de lecciones (relación N:N con estado)
+CREATE TABLE IF NOT EXISTS lesson_progress (
+  user_id INT NOT NULL,
+  lesson_id INT NOT NULL,
+  completed_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+  PRIMARY KEY (user_id, lesson_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Inscripciones (relación N:N)

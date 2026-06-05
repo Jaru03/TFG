@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique @db.VarChar(50)
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  googleId  String   @unique @map("google_id") @db.VarChar(255)
+  name      String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  roleId    Int      @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  role           Role             @relation(fields: [roleId], references: [id])
+  courses        Course[]
+  results        Result[]
+  lessonProgress LessonProgress[]
+  enrollments    UserCourse[]
+
+  @@map("users")
+}
+
+model Course {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  coverImage  String?  @map("cover_image") @db.VarChar(255)
+  createdBy   Int?     @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  creator     User?        @relation(fields: [createdBy], references: [id])
+  lessons     Lesson[]
+  tests       Test[]
+  enrollments UserCourse[]
+
+  @@map("courses")
+}
+
+model Lesson {
+  id          Int     @id @default(autoincrement())
+  courseId    Int     @map("course_id")
+  title       String  @db.VarChar(255)
+  content     String? @db.Text
+  orderNumber Int     @default(1) @map("order_number")
+
+  course      Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attachments LessonAttachment[]
+  progress    LessonProgress[]
+
+  @@map("lessons")
+}
+
+model LessonAttachment {
+  id           Int      @id @default(autoincrement())
+  lessonId     Int      @map("lesson_id")
+  type         String   @db.VarChar(20)
+  filename     String?  @db.VarChar(255)
+  originalName String?  @map("original_name") @db.VarChar(255)
+  mimeType     String?  @map("mime_type") @db.VarChar(100)
+  url          String?  @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("lesson_attachments")
+}
+
+model Test {
+  id          Int      @id @default(autoincrement())
+  courseId    Int      @map("course_id")
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  maxScore    Decimal  @default(10) @map("max_score") @db.Decimal(5, 2)
+
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
+  results   Result[]
+
+  @@map("tests")
+}
+
+model Question {
+  id            Int      @id @default(autoincrement())
+  testId        Int      @map("test_id")
+  question      String   @db.Text
+  optionA       String   @map("option_a") @db.VarChar(255)
+  optionB       String   @map("option_b") @db.VarChar(255)
+  optionC       String   @map("option_c") @db.VarChar(255)
+  correctOption String   @map("correct_option") @db.Char(1)
+  points        Decimal? @db.Decimal(5, 2)
+
+  test Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model Result {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  testId      Int      @map("test_id")
+  score       Decimal  @db.Decimal(5, 2)
+  completedAt DateTime @default(now()) @map("completed_at") @db.Timestamp(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@map("results")
+}
+
+model LessonProgress {
+  userId      Int      @map("user_id")
+  lessonId    Int      @map("lesson_id")
+  completedAt DateTime @default(now()) @map("completed_at") @db.Timestamp(6)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model UserCourse {
+  userId     Int      @map("user_id")
+  courseId   Int      @map("course_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at") @db.Timestamp(6)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([userId, courseId])
+  @@map("user_courses")
+}

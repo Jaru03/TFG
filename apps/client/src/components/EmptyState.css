@@ -1,0 +1,38 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--clr-text-2);
+}
+
+.empty-state--boxed {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r-lg);
+}
+
+.empty-state-icon {
+  color: var(--clr-text-3);
+  line-height: 0;
+}
+
+.empty-state-message {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--clr-text-1);
+}
+
+.empty-state-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--clr-text-2);
+}
+
+.empty-state-action {
+  margin-top: 0.5rem;
+}

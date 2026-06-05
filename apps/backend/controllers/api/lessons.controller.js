@@ -1,17 +1,24 @@
-const {
+import { wrapController } from '../../middleware/errorHandler.js';
+import {
   listLessonsByCourse,
   findLessonById,
-  createLesson: createLessonService,
-  updateLesson: updateLessonService,
-  deleteLesson: deleteLessonService
-} = require('../../services/lesson.service');
+  createLesson as createLessonService,
+  updateLesson as updateLessonService,
+  deleteLesson as deleteLessonService
+} from '../../services/lesson.service.js';
 
-const {
+import {
   listAttachmentsByLesson,
   createFileAttachment,
   createVideoUrlAttachment,
   deleteAttachment,
-} = require('../../services/lesson-attachment.service');
+} from '../../services/lesson-attachment.service.js';
+
+import {
+  markLessonComplete,
+  unmarkLessonComplete,
+  listCompletedLessonIds,
+} from '../../services/lesson-progress.service.js';
 
 async function listLessons(req, res) {
   const { courseId } = req.params;
@@ -31,16 +38,7 @@ async function createLesson(req, res) {
   const { courseId } = req.params;
   const { title, content, orderNumber } = req.body;
 
-  if (!title || !title.trim()) {
-    return res.status(400).json({ message: 'El título es obligatorio.' });
-  }
-
-  const lesson = await createLessonService({
-    courseId,
-    title: title.trim(),
-    content: content ? content.trim() : '',
-    orderNumber: orderNumber || 1
-  });
+  const lesson = await createLessonService({ courseId, title, content, orderNumber });
 
   res.status(201).json(lesson);
 }
@@ -52,14 +50,10 @@ async function updateLesson(req, res) {
   }
 
   const { title, content, orderNumber } = req.body;
-  if (!title || !title.trim()) {
-    return res.status(400).json({ message: 'El título es obligatorio.' });
-  }
-
   const updated = await updateLessonService(req.params.id, {
-    title: title.trim(),
-    content: content ? content.trim() : '',
-    orderNumber: orderNumber || lesson.order_number
+    title,
+    content,
+    orderNumber: orderNumber ?? lesson.order_number
   });
 
   res.json(updated);
@@ -71,54 +65,56 @@ async function deleteLesson(req, res) {
 }
 
 async function getAttachments(req, res) {
-  try {
-    const attachments = await listAttachmentsByLesson(req.params.id);
-    res.json(attachments);
-  } catch (err) {
-    console.error('getAttachments error:', err.message);
-    res.status(500).json({ message: err.message });
-  }
+  const attachments = await listAttachmentsByLesson(req.params.id);
+  res.json(attachments);
 }
 
 async function uploadAttachment(req, res) {
-  try {
-    const { id: lessonId } = req.params;
+  const { id: lessonId } = req.params;
 
-    if (req.file) {
-      const url = `/uploads/lessons/${req.file.filename}`;
-      const attachment = await createFileAttachment({
-        lessonId,
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        url,
-      });
-      return res.status(201).json(attachment);
-    }
-
-    if (req.body.videoUrl) {
-      const attachment = await createVideoUrlAttachment({ lessonId, url: req.body.videoUrl });
-      return res.status(201).json(attachment);
-    }
-
-    res.status(400).json({ message: 'Se requiere un archivo o URL de vídeo.' });
-  } catch (err) {
-    console.error('uploadAttachment error:', err.message);
-    res.status(500).json({ message: err.message });
+  if (req.file) {
+    const url = `/uploads/lessons/${req.file.filename}`;
+    const attachment = await createFileAttachment({
+      lessonId,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      url,
+    });
+    return res.status(201).json(attachment);
   }
+
+  if (req.body.videoUrl) {
+    const attachment = await createVideoUrlAttachment({ lessonId, url: req.body.videoUrl });
+    return res.status(201).json(attachment);
+  }
+
+  res.status(400).json({ message: 'Se requiere un archivo o URL de vídeo.' });
 }
 
 async function removeAttachment(req, res) {
-  try {
-    await deleteAttachment(req.params.attachmentId);
-    res.status(204).end();
-  } catch (err) {
-    console.error('removeAttachment error:', err.message);
-    res.status(500).json({ message: err.message });
-  }
+  await deleteAttachment(req.params.attachmentId);
+  res.status(204).end();
 }
 
-module.exports = {
+// ── Progreso de lecciones (alumno) ──────────────────────────────────────────
+
+async function completeLesson(req, res) {
+  await markLessonComplete(req.user.id, req.params.id);
+  res.status(201).json({ completed: true });
+}
+
+async function uncompleteLesson(req, res) {
+  await unmarkLessonComplete(req.user.id, req.params.id);
+  res.status(204).end();
+}
+
+async function getCompletedLessons(req, res) {
+  const ids = await listCompletedLessonIds(req.user.id, req.params.courseId);
+  res.json(ids);
+}
+
+export default wrapController({
   listLessons,
   getLesson,
   createLesson,
@@ -127,4 +123,7 @@ module.exports = {
   getAttachments,
   uploadAttachment,
   removeAttachment,
-};
+  completeLesson,
+  uncompleteLesson,
+  getCompletedLessons,
+});

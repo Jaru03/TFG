@@ -1,67 +1,66 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
-import { ArrowLeft, Plus, FileText, Trash2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { testsApi } from '../api';
+import { ArrowLeft, Plus, FileText, Trash2, Pencil } from 'lucide-react';
+import { isTeacher } from '../lib/roles';
+import Loading from '../components/Loading';
+import EmptyState from '../components/EmptyState';
+import Alert from '../components/Alert';
+import AutoTextarea from '../components/AutoTextarea';
 import './TestsPage.css';
 
 export default function TestsPage({ user }) {
   const { id } = useParams();
-  const [tests, setTests] = useState([]);
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
-  const load = async () => {
-    try {
-      const res = await axios.get(`/api/courses/${id}/tests`);
-      setTests(res.data);
-    } catch (err) {
-      setError('No se pudieron cargar los tests.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const testsKey = ['courses', id, 'tests'];
 
-  useEffect(() => {
-    load();
-  }, [id]);
+  const { data: tests = [], isLoading: loading, error: loadError } = useQuery({
+    queryKey: testsKey,
+    queryFn: () => testsApi.listByCourse(id),
+  });
 
-  const handleCreate = async ev => {
-    ev.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (!title.trim()) {
-      setError('El título es obligatorio.');
-      return;
-    }
-
-    try {
-      await axios.post(`/api/courses/${id}/tests`, { title, description });
+  const createMutation = useMutation({
+    mutationFn: () => testsApi.create(id, { title, description }),
+    onSuccess: () => {
       setTitle('');
       setDescription('');
       setSuccess('Test creado correctamente.');
       setShowForm(false);
-      load();
-    } catch (err) {
-      setError('No se pudo crear el test.');
+      queryClient.invalidateQueries({ queryKey: testsKey });
+    },
+    onError: () => setError('No se pudo crear el test.'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (testId) => testsApi.remove(testId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: testsKey }),
+    onError: () => setError('No se pudo eliminar el test.'),
+  });
+
+  const handleCreate = (ev) => {
+    ev.preventDefault();
+    setError(null);
+    setSuccess(null);
+    if (!title.trim()) {
+      setError('El título es obligatorio.');
+      return;
     }
+    createMutation.mutate();
   };
 
-  const handleDelete = async (testId) => {
+  const handleDelete = (testId) => {
     if (!confirm('¿Estás seguro de eliminar este test?')) return;
-    try {
-      await axios.delete(`/api/tests/${testId}`);
-      load();
-    } catch (err) {
-      setError('No se pudo eliminar el test.');
-    }
+    deleteMutation.mutate(testId);
   };
 
-  const isProfessor = user.role === 'profesor' || user.role === 'administrador';
+  const isProfessor = isTeacher(user);
 
   return (
     <div className="tests-page">
@@ -86,8 +85,8 @@ export default function TestsPage({ user }) {
           )}
         </div>
 
-        {error && <div className="tests-alert tests-alert-error">{error}</div>}
-        {success && <div className="tests-alert tests-alert-success">{success}</div>}
+        {(error || loadError) && <Alert>{error || 'No se pudieron cargar los tests.'}</Alert>}
+        {success && <Alert type="success">{success}</Alert>}
 
         {showForm && (
           <div className="tests-form-card">
@@ -104,7 +103,7 @@ export default function TestsPage({ user }) {
               </div>
               <div className="tests-form-group">
                 <label>Descripción</label>
-                <textarea
+                <AutoTextarea
                   placeholder="Describe el contenido del test..."
                   rows={3}
                   value={description}
@@ -115,7 +114,7 @@ export default function TestsPage({ user }) {
                 <button type="button" className="tests-btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="tests-btn-primary">
+                <button type="submit" className="tests-btn-primary" disabled={createMutation.isPending}>
                   Crear test
                 </button>
               </div>
@@ -124,36 +123,35 @@ export default function TestsPage({ user }) {
         )}
 
         {loading ? (
-          <div className="tests-loading">Cargando...</div>
+          <Loading message="Cargando..." />
         ) : tests.length === 0 ? (
-          <div className="tests-empty">
-            <FileText size={48} />
-            <p>No hay tests todavía.</p>
-            {isProfessor && <p>Crea tu primer test para evaluar a tus alumnos.</p>}
-          </div>
+          <EmptyState
+            boxed
+            icon={<FileText size={48} />}
+            message="No hay tests todavía."
+            hint={isProfessor ? 'Crea tu primer test para evaluar a tus alumnos.' : undefined}
+          />
         ) : (
           <div className="tests-list">
-            {tests.map(test => (
+            {tests.map((test, idx) => (
               <div key={test.id} className="tests-item">
-                <div className="tests-icon">
-                  <FileText size={24} />
-                </div>
+                <span className="tests-num">{idx + 1}</span>
                 <div className="tests-content">
                   <h3>{test.title}</h3>
-                  <p>{test.description || 'Sin descripción'}</p>
+                  {test.description && <p>{test.description}</p>}
                 </div>
                 <div className="tests-actions">
                   {isProfessor ? (
                     <>
-                      <Link to={`/tests/${test.id}/manage`} className="tests-btn tests-btn-primary">
-                        Gestionar
+                      <Link to={`/tests/${test.id}/manage`} className="tests-icon-btn" title="Gestionar preguntas">
+                        <Pencil size={15} />
                       </Link>
-                      <button className="tests-btn tests-btn-delete" onClick={() => handleDelete(test.id)}>
-                        <Trash2 size={16} />
+                      <button className="tests-icon-btn tests-icon-btn--danger" title="Eliminar" onClick={() => handleDelete(test.id)}>
+                        <Trash2 size={15} />
                       </button>
                     </>
                   ) : (
-                    <Link to={`/tests/${test.id}`} className="tests-btn tests-btn-primary">
+                    <Link to={`/tests/${test.id}`} className="tests-realizar-btn">
                       Realizar
                     </Link>
                   )}

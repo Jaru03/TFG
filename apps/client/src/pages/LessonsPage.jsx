@@ -1,30 +1,20 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { lessonsApi } from '../api';
+import { isTeacher } from '../lib/roles';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft, Plus, Trash2, Pencil, X,
   ImageIcon, FileVideo, FileText, Link2, Upload, Check,
 } from 'lucide-react';
+import Loading from '../components/Loading';
+import EmptyState from '../components/EmptyState';
+import Alert from '../components/Alert';
+import AutoTextarea from '../components/AutoTextarea';
 import './LessonsPage.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-function toEmbedUrl(url) {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes('youtube.com')) {
-      const v = u.searchParams.get('v');
-      return v ? `https://www.youtube.com/embed/${v}` : null;
-    }
-    if (u.hostname === 'youtu.be') {
-      return `https://www.youtube.com/embed${u.pathname}`;
-    }
-    if (u.hostname.includes('vimeo.com')) {
-      return `https://player.vimeo.com/video${u.pathname}`;
-    }
-  } catch { /* invalid url */ }
-  return null;
-}
 
 function AttachmentChip({ a, onDelete }) {
   const icons = {
@@ -71,7 +61,7 @@ function LessonForm({ initial = {}, lessonId, onSave, onCancel, onComplete }) {
 
   const deleteExisting = async (attachmentId) => {
     try {
-      await axios.delete(`/api/lessons/attachments/${attachmentId}`);
+      await lessonsApi.removeAttachment(attachmentId);
       setAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch {
       setError('No se pudo eliminar el adjunto.');
@@ -90,11 +80,11 @@ function LessonForm({ initial = {}, lessonId, onSave, onCancel, onComplete }) {
       for (const file of pendingFiles) {
         const fd = new FormData();
         fd.append('file', file);
-        await axios.post(`/api/lessons/${id}/attachments`, fd);
+        await lessonsApi.addAttachment(id, fd);
       }
 
       if (videoUrl.trim()) {
-        await axios.post(`/api/lessons/${id}/attachments`, { videoUrl: videoUrl.trim() });
+        await lessonsApi.addAttachment(id, { videoUrl: videoUrl.trim() });
       }
 
       // All done — tell parent to close and refresh
@@ -123,7 +113,7 @@ function LessonForm({ initial = {}, lessonId, onSave, onCancel, onComplete }) {
 
       <div className="lesson-form-row">
         <label>Contenido</label>
-        <textarea
+        <AutoTextarea
           placeholder="Describe el contenido de la lección…"
           rows={4}
           value={content}
@@ -202,67 +192,56 @@ function LessonForm({ initial = {}, lessonId, onSave, onCancel, onComplete }) {
 
 export default function LessonsPage({ user }) {
   const { id: courseId } = useParams();
-  const [lessons, setLessons] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [lessonAttachments, setLessonAttachments] = useState({});
 
-  const isProfessor = user.role === 'profesor' || user.role === 'administrador';
+  const isProfessor = isTeacher(user);
 
-  const load = async () => {
-    try {
-      const res = await axios.get(`/api/courses/${courseId}/lessons`);
-      setLessons(res.data);
-    } catch {
-      setError('No se pudieron cargar las lecciones.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, [courseId]);
+  const lessonsKey = ['courses', courseId, 'lessons'];
+  const { data: lessons = [], isLoading: loading, error: loadError } = useQuery({
+    queryKey: lessonsKey,
+    queryFn: () => lessonsApi.listByCourse(courseId),
+  });
+  const reloadLessons = () => queryClient.invalidateQueries({ queryKey: lessonsKey });
 
   const fetchAttachments = async (lessonId) => {
     if (lessonAttachments[lessonId]) return lessonAttachments[lessonId];
     try {
-      const res = await axios.get(`/api/lessons/${lessonId}/attachments`);
-      setLessonAttachments(prev => ({ ...prev, [lessonId]: res.data }));
-      return res.data;
+      const data = await lessonsApi.attachments(lessonId);
+      setLessonAttachments(prev => ({ ...prev, [lessonId]: data }));
+      return data;
     } catch { return []; }
   };
 
-  const handleCreate = async ({ title, content }) => {
-    const res = await axios.post(`/api/courses/${courseId}/lessons`, { title, content });
-    return res.data;
-  };
+  const handleCreate = ({ title, content }) => lessonsApi.create(courseId, { title, content });
 
-  const handleEdit = async ({ title, content, lessonId }) => {
+  const handleEdit = ({ title, content, lessonId }) => {
     const lesson = lessons.find(l => l.id === lessonId);
-    const res = await axios.put(`/api/lessons/${lessonId}`, {
+    return lessonsApi.update(lessonId, {
       title,
       content,
       orderNumber: lesson?.order_number || 1,
     });
-    return res.data;
   };
 
   const handleFormComplete = async (lessonId) => {
     setCreating(false);
     setEditingId(null);
-    await load();
+    await reloadLessons();
     try {
-      const res = await axios.get(`/api/lessons/${lessonId}/attachments`);
-      setLessonAttachments(prev => ({ ...prev, [lessonId]: res.data }));
+      const data = await lessonsApi.attachments(lessonId);
+      setLessonAttachments(prev => ({ ...prev, [lessonId]: data }));
     } catch { /* tabla aún no creada o sin adjuntos */ }
   };
 
   const handleDelete = async (lessonId) => {
     if (!confirm('¿Eliminar esta lección?')) return;
     try {
-      await axios.delete(`/api/lessons/${lessonId}`);
-      await load();
+      await lessonsApi.remove(lessonId);
+      await reloadLessons();
     } catch {
       setError('No se pudo eliminar la lección.');
     }
@@ -295,42 +274,63 @@ export default function LessonsPage({ user }) {
 
         <h1 className="lessons-heading">Lecciones</h1>
 
-        {error && <div className="lessons-alert lessons-alert-error">{error}</div>}
+        {(error || loadError) && <Alert>{error || 'No se pudieron cargar las lecciones.'}</Alert>}
 
         {/* Create form */}
-        {creating && (
-          <div className="lesson-card lesson-card--form">
-            <p className="lesson-card-form-title">Nueva lección</p>
-            <LessonForm
-              onSave={handleCreate}
-              onCancel={() => setCreating(false)}
-              onComplete={handleFormComplete}
-            />
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {creating && (
+            <motion.div
+              className="lesson-card lesson-card--form"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <p className="lesson-card-form-title">Nueva lección</p>
+              <LessonForm
+                onSave={handleCreate}
+                onCancel={() => setCreating(false)}
+                onComplete={handleFormComplete}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* List */}
         {loading ? (
-          <div className="lessons-loading">Cargando…</div>
+          <Loading />
         ) : lessons.length === 0 && !creating ? (
-          <div className="lessons-empty">
-            <p>No hay lecciones todavía.</p>
-            {isProfessor && (
+          <EmptyState
+            boxed
+            message="No hay lecciones todavía."
+            action={isProfessor && (
               <button className="lessons-add-btn" onClick={() => setCreating(true)}>
                 <Plus size={16} /> Crear primera lección
               </button>
             )}
-          </div>
+          />
         ) : (
-          <div className="lessons-list">
+          <motion.div
+            className="lessons-list"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          >
             {lessons.map((lesson, idx) => {
               const isEditing = editingId === lesson.id;
               const chips = lessonAttachments[lesson.id] || [];
 
               return (
-                <div key={lesson.id} className={`lesson-card ${isEditing ? 'lesson-card--editing' : ''}`}>
+                <motion.div
+                  key={lesson.id}
+                  layout
+                  transition={{ layout: { duration: 0.3, ease: [0.16, 1, 0.3, 1] } }}
+                  style={{ borderRadius: '10px' }}
+                  className={`lesson-card ${isEditing ? 'lesson-card--editing' : ''}`}
+                >
                   {isEditing ? (
-                    <>
+                    <motion.div layout="position" key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, delay: 0.08 }}>
                       <p className="lesson-card-form-title">Editando lección {idx + 1}</p>
                       <LessonForm
                         initial={{ title: lesson.title, content: lesson.content, attachments: chips }}
@@ -339,9 +339,9 @@ export default function LessonsPage({ user }) {
                         onCancel={() => setEditingId(null)}
                         onComplete={handleFormComplete}
                       />
-                    </>
+                    </motion.div>
                   ) : (
-                    <div className="lesson-row">
+                    <motion.div layout="position" key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, delay: 0.08 }} className="lesson-row">
                       <span className="lesson-num">{idx + 1}</span>
                       <div className="lesson-meta">
                         <span className="lesson-title">{lesson.title}</span>
@@ -369,12 +369,12 @@ export default function LessonsPage({ user }) {
                           </button>
                         </div>
                       )}
-                    </div>
+                    </motion.div>
                   )}
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

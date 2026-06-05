@@ -1,0 +1,99 @@
+.points-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.points-field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--clr-text-2, #4b5563);
+}
+
+/* El espaciado va en márgenes (no en gap) para que el del input forme parte
+   de la altura animada y el contenedor no salte al montarse/desmontarse. */
+.points-seg { margin-top: 0.5rem; }
+.points-input-wrap { margin-top: 0.5rem; }
+
+/* Toggle segmentado */
+.points-seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--clr-border-soft, #f3f4f6);
+  border: 1px solid var(--clr-border, #e5e7eb);
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.points-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--clr-text-2, #6b7280);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.points-seg-btn:hover { color: var(--clr-text-1, #111827); }
+
+.points-seg-btn.is-active {
+  background: var(--clr-surface, #ffffff);
+  color: var(--clr-accent-dark, #4f46e5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* Input con sufijo */
+.points-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--clr-border, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--clr-surface, #fff);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.points-input-wrap:focus-within {
+  border-color: var(--clr-accent, #6366f1);
+  box-shadow: 0 0 0 3px var(--clr-accent-subtle, #eef2ff);
+}
+
+.points-input-wrap input {
+  width: 84px;
+  padding: 0.5rem 0.25rem 0.5rem 0.75rem;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--clr-text-1, #111827);
+  background: transparent;
+}
+
+/* Oculta las flechas del number para un look más limpio */
+.points-input-wrap input::-webkit-outer-spin-button,
+.points-input-wrap input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.points-input-wrap input[type="number"] { -moz-appearance: textfield; }
+
+.points-input-suffix {
+  padding: 0 0.75rem 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--clr-text-3, #9ca3af);
+}
+
+.points-field-help {
+  margin: 0.5rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--clr-text-3, #9ca3af);
+}

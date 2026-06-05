@@ -7,4 +7,4 @@ function getMe(req, res) {
   res.json({ id, name, email, role });
 }
 
-module.exports = { getMe };
+export default { getMe };

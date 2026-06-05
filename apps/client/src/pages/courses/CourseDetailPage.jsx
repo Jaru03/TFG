@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { coursesApi, lessonsApi, testsApi, resultsApi } from '../../api';
+import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, FileText, User, ChevronRight, ChevronDown, Lock, CheckCircle2, Circle, FileDown } from 'lucide-react';
+import Loading from '../../components/Loading';
+import EmptyState from '../../components/EmptyState';
+import Alert from '../../components/Alert';
 import './CourseDetailPage.css';
 
 function toEmbedUrl(url) {
@@ -18,13 +23,10 @@ function toEmbedUrl(url) {
 }
 
 function LessonMedia({ lessonId }) {
-  const [attachments, setAttachments] = useState(null);
-
-  useEffect(() => {
-    axios.get(`/api/lessons/${lessonId}/attachments`)
-      .then(r => setAttachments(r.data))
-      .catch(() => setAttachments([]));
-  }, [lessonId]);
+  const { data: attachments } = useQuery({
+    queryKey: ['lessons', lessonId, 'attachments'],
+    queryFn: () => lessonsApi.attachments(lessonId),
+  });
 
   if (!attachments || attachments.length === 0) return null;
 
@@ -68,75 +70,99 @@ function LessonMedia({ lessonId }) {
   );
 }
 
-export default function CourseDetailPage({ user }) {
+export default function CourseDetailPage() {
   const { id } = useParams();
-  const [course, setCourse] = useState(null);
-  const [lessons, setLessons] = useState([]);
-  const [tests, setTests] = useState([]);
-  const [isEnrolled, setIsEnrolled] = useState(false);
-  const [resultsByTestId, setResultsByTestId] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState(null);
+  const [expandedLesson, setExpandedLesson] = useState(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [courseRes, lessonsRes, testsRes, enrollmentRes, resultsRes] = await Promise.all([
-          axios.get(`/api/courses/${id}`),
-          axios.get(`/api/courses/${id}/lessons`),
-          axios.get(`/api/courses/${id}/tests`),
-          axios.get(`/api/courses/${id}/enrollment`),
-          axios.get('/api/results/me'),
-        ]);
+  const { data: course, isLoading: loadingCourse, error: courseError } = useQuery({
+    queryKey: ['courses', id],
+    queryFn: () => coursesApi.get(id),
+  });
+  const { data: lessons = [], isLoading: loadingLessons } = useQuery({
+    queryKey: ['courses', id, 'lessons'],
+    queryFn: () => lessonsApi.listByCourse(id),
+  });
+  const { data: tests = [], isLoading: loadingTests } = useQuery({
+    queryKey: ['courses', id, 'tests'],
+    queryFn: () => testsApi.listByCourse(id),
+  });
+  const { data: enrollment, isLoading: loadingEnrollment } = useQuery({
+    queryKey: ['courses', id, 'enrollment'],
+    queryFn: () => coursesApi.enrollment(id),
+  });
+  const { data: results = [], isLoading: loadingResults } = useQuery({
+    queryKey: ['results', 'me'],
+    queryFn: resultsApi.me,
+  });
+  const { data: completedIds, isLoading: loadingCompleted } = useQuery({
+    queryKey: ['courses', id, 'lessons', 'completed'],
+    queryFn: () => lessonsApi.completed(id),
+  });
 
-        setCourse(courseRes.data);
-        setLessons(lessonsRes.data);
-        setTests(testsRes.data);
-        setIsEnrolled(enrollmentRes.data.enrolled);
+  const loading = loadingCourse || loadingLessons || loadingTests
+    || loadingEnrollment || loadingResults || loadingCompleted;
 
-        const testIds = new Set(testsRes.data.map(t => t.id));
-        const map = {};
-        resultsRes.data
-          .filter(r => testIds.has(r.test_id))
-          .forEach(r => {
-            if (map[r.test_id] === undefined || r.score > map[r.test_id]) {
-              map[r.test_id] = r.score;
-            }
-          });
-        setResultsByTestId(map);
-      } catch {
-        setError('Error al cargar el curso.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
+  // Derivado directamente de las queries: la inscripción y las lecciones
+  // completadas se actualizan de forma optimista escribiendo en la caché de
+  // React Query (setQueryData), sin estado local ni efectos de sincronización.
+  const isEnrolled = enrollment?.enrolled ?? false;
+  const completedLessons = useMemo(() => new Set(completedIds ?? []), [completedIds]);
 
-  const handleEnroll = async () => {
-    setEnrolling(true);
+  // Mejor nota por test (derivada).
+  const resultsByTestId = useMemo(() => {
+    const testIds = new Set(tests.map(t => t.id));
+    const map = {};
+    results
+      .filter(r => testIds.has(r.test_id))
+      .forEach(r => {
+        if (map[r.test_id] === undefined || r.score > map[r.test_id]) {
+          map[r.test_id] = r.score;
+        }
+      });
+    return map;
+  }, [results, tests]);
+
+  const enrollMutation = useMutation({
+    mutationFn: () => coursesApi.enroll(id),
+    onSuccess: () => {
+      queryClient.setQueryData(['courses', id, 'enrollment'], { enrolled: true });
+      queryClient.invalidateQueries({ queryKey: ['courses', 'enrolled'] });
+    },
+    onError: () => setError('No se pudo completar la inscripción.'),
+  });
+  const handleEnroll = () => enrollMutation.mutate();
+
+  const completedKey = ['courses', id, 'lessons', 'completed'];
+  const toggleLessonComplete = async (lessonId) => {
+    const done = completedLessons.has(lessonId);
+    const prev = completedIds ?? [];
+    // Optimista: escribimos la caché para que la UI responda al instante.
+    queryClient.setQueryData(completedKey, done ? prev.filter(x => x !== lessonId) : [...prev, lessonId]);
     try {
-      await axios.post(`/api/courses/${id}/enroll`);
-      setIsEnrolled(true);
+      if (done) await lessonsApi.uncomplete(lessonId);
+      else await lessonsApi.complete(lessonId);
     } catch {
-      setError('No se pudo completar la inscripción.');
-    } finally {
-      setEnrolling(false);
+      queryClient.setQueryData(completedKey, prev); // revertir
+      setError('No se pudo actualizar el progreso de la lección.');
     }
   };
 
-  const [expandedLesson, setExpandedLesson] = useState(null);
+  // Progreso combinado: lecciones completadas + tests realizados sobre el total.
+  const completedTestsCount = Object.keys(resultsByTestId).length;
+  const completedLessonsCount = lessons.filter(l => completedLessons.has(l.id)).length;
+  const totalItems = lessons.length + tests.length;
+  const completedItems = completedLessonsCount + completedTestsCount;
+  const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  const allDone = totalItems > 0 && completedItems === totalItems;
 
-  const completedCount = Object.keys(resultsByTestId).length;
-  const progressPercent = tests.length > 0 ? Math.round((completedCount / tests.length) * 100) : 0;
-  const allDone = tests.length > 0 && completedCount === tests.length;
+  if (loading) return <Loading minHeight="50vh" />;
 
-  if (loading) return <div className="course-loading">Cargando...</div>;
-
-  if (error) {
+  if (courseError || error) {
     return (
       <div className="container">
-        <div className="alert alert-error">{error}</div>
+        <Alert>{error || 'Error al cargar el curso.'}</Alert>
       </div>
     );
   }
@@ -172,14 +198,14 @@ export default function CourseDetailPage({ user }) {
               </span>
             </div>
 
-            {/* ── Progress strip (only when enrolled and there are tests) ── */}
-            {isEnrolled && tests.length > 0 && (
+            {/* ── Progress strip (enrolled, with lessons o tests) ── */}
+            {isEnrolled && totalItems > 0 && (
               <div className="course-progress">
                 <div className="course-progress-meta">
                   <span className="course-progress-label">
                     {allDone
                       ? 'Curso completado'
-                      : `${completedCount} de ${tests.length} tests completados`}
+                      : `${completedItems} de ${totalItems} completados`}
                   </span>
                   <span className={`course-progress-pct ${allDone ? 'done' : ''}`}>
                     {progressPercent}%
@@ -205,9 +231,9 @@ export default function CourseDetailPage({ user }) {
               <button
                 className="course-enroll-btn"
                 onClick={handleEnroll}
-                disabled={enrolling}
+                disabled={enrollMutation.isPending}
               >
-                {enrolling ? 'Inscribiéndose…' : 'Inscribirse'}
+                {enrollMutation.isPending ? 'Inscribiéndose…' : 'Inscribirse'}
               </button>
             )}
           </div>
@@ -225,8 +251,9 @@ export default function CourseDetailPage({ user }) {
                 <div className="course-lessons">
                   {lessons.map((lesson, index) => {
                     const open = expandedLesson === lesson.id;
+                    const done = completedLessons.has(lesson.id);
                     return (
-                      <div key={lesson.id} className={`course-lesson ${open ? 'course-lesson--open' : ''}`}>
+                      <div key={lesson.id} className={`course-lesson ${open ? 'course-lesson--open' : ''} ${done ? 'course-lesson--done' : ''}`}>
                         <button
                           className="course-lesson-header"
                           onClick={() => setExpandedLesson(open ? null : lesson.id)}
@@ -234,14 +261,35 @@ export default function CourseDetailPage({ user }) {
                         >
                           <span className="course-lesson-number">{index + 1}</span>
                           <span className="course-lesson-title">{lesson.title}</span>
+                          {done && <CheckCircle2 size={16} className="course-lesson-done-icon" />}
                           <ChevronDown size={16} className="course-lesson-chevron" />
                         </button>
-                        {open && (
-                          <div className="course-lesson-body">
-                            {lesson.content && <p>{lesson.content}</p>}
-                            <LessonMedia lessonId={lesson.id} />
-                          </div>
-                        )}
+                        <AnimatePresence initial={false}>
+                          {open && (
+                            <motion.div
+                              key="body"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                              style={{ overflow: 'hidden' }}
+                            >
+                              <div className="course-lesson-body">
+                                {lesson.content && <p>{lesson.content}</p>}
+                                <LessonMedia lessonId={lesson.id} />
+                                <button
+                                  type="button"
+                                  className={`lesson-complete-btn ${done ? 'lesson-complete-btn--done' : ''}`}
+                                  onClick={() => toggleLessonComplete(lesson.id)}
+                                >
+                                  {done
+                                    ? <><CheckCircle2 size={15} /> Completada</>
+                                    : <><Circle size={15} /> Marcar como completada</>}
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
                   })}
@@ -288,7 +336,7 @@ export default function CourseDetailPage({ user }) {
             )}
 
             {lessons.length === 0 && tests.length === 0 && (
-              <div className="course-empty">Este curso no tiene contenido aún.</div>
+              <EmptyState boxed message="Este curso no tiene contenido aún." />
             )}
           </>
         ) : (

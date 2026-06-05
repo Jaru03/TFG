@@ -1,43 +1,36 @@
-import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
-import { ArrowLeft, BookOpen, FileText, Users, Edit, CheckCircle, Clock } from 'lucide-react';
-import StatCard from '../../components/Dashboard/StatCard';
+import { useQuery } from '@tanstack/react-query';
+import { coursesApi } from '../../api';
+import { ArrowLeft, BookOpen, FileText, Users, Edit, TrendingUp } from 'lucide-react';
+import StatCard from '../../components/StatCard';
+import StudentsProgressTable from '../../components/StudentsProgressTable';
+import Loading from '../../components/Loading';
+import Alert from '../../components/Alert';
 import './CourseDetailTeacher.css';
 
-const CourseDetailTeacher = ({ user }) => {
+const CourseDetailTeacher = () => {
   const { id } = useParams();
-  const [course, setCourse] = useState(null);
-  const [stats, setStats] = useState({ students: 0, lessons: 0, tests: 0, completedTests: 0 });
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [courseRes, statsRes] = await Promise.all([
-          axios.get(`/api/courses/${id}`),
-          axios.get(`/api/courses/${id}/stats`)
-        ]);
-        setCourse(courseRes.data);
-        setStats(statsRes.data);
-      } catch (err) {
-        setError('Error al cargar el curso.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
+  const { data: course, isLoading: loadingCourse, error: errorCourse } = useQuery({
+    queryKey: ['courses', id],
+    queryFn: () => coursesApi.get(id),
+  });
+  const { data: stats = { students: 0, lessons: 0, tests: 0, avgProgress: 0 }, isLoading: loadingStats, error: errorStats } = useQuery({
+    queryKey: ['courses', id, 'stats'],
+    queryFn: () => coursesApi.stats(id),
+  });
+
+  const loading = loadingCourse || loadingStats;
+  const error = errorCourse || errorStats;
 
   if (loading) {
-    return <div className="course-teacher-loading">Cargando...</div>;
+    return <Loading minHeight="50vh" />;
   }
 
   if (error) {
     return (
       <div className="container">
-        <div className="alert alert-error">{error}</div>
+        <Alert>Error al cargar el curso.</Alert>
       </div>
     );
   }
@@ -46,9 +39,9 @@ const CourseDetailTeacher = ({ user }) => {
     <div className="course-teacher">
       <div className="course-teacher-container">
         <div className="course-teacher-header">
-          <Link to="/courses" className="course-teacher-back">
+          <Link to="/" className="course-teacher-back">
             <ArrowLeft size={20} />
-            <span>Volver a cursos</span>
+            <span>Volver al inicio</span>
           </Link>
         </div>
 
@@ -61,10 +54,10 @@ const CourseDetailTeacher = ({ user }) => {
         </div>
 
         <div className="course-teacher-stats">
-          <StatCard icon="users" value={stats.students} label="Alumnos inscritos" />
-          <StatCard icon="book" value={stats.lessons} label="Lecciones" />
-          <StatCard icon="file" value={stats.tests} label="Tests" />
-          <StatCard icon="check" value={stats.completedTests} label="Tests completados" />
+          <StatCard icon={<Users size={18} />}       value={stats.students}       label="Alumnos inscritos"  iconBg="#eef2ff" iconColor="#6366f1" />
+          <StatCard icon={<BookOpen size={18} />}    value={stats.lessons}        label="Lecciones"          iconBg="#dcfce7" iconColor="#16a34a" />
+          <StatCard icon={<FileText size={18} />}    value={stats.tests}          label="Tests"              iconBg="#fef3c7" iconColor="#d97706" />
+          <StatCard icon={<TrendingUp size={18} />}  value={`${stats.avgProgress}%`} label="Progreso medio"  iconBg="#fce7f3" iconColor="#db2777" />
         </div>
 
         <div className="course-teacher-actions">
@@ -82,6 +75,11 @@ const CourseDetailTeacher = ({ user }) => {
               <p>Crea y modifica los tests del curso</p>
             </div>
           </Link>
+        </div>
+
+        <div className="course-teacher-students">
+          <h2 className="course-teacher-section-title">Seguimiento de alumnos</h2>
+          <StudentsProgressTable endpoint={`/api/courses/${id}/students-progress`} />
         </div>
       </div>
     </div>

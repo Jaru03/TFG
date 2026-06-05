@@ -1,96 +1,167 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Trash2, Users, BookOpen, UserCheck, ShieldCheck } from 'lucide-react';
-import StatCard from './StatCard';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { adminApi } from '../../api';
+import { Trash2, Users, BookOpen, UserCheck, ShieldCheck, Pencil, X } from 'lucide-react';
+import StatCard from '../../components/StatCard';
+import Loading from '../../components/Loading';
+import Alert from '../../components/Alert';
 
-function UserRow({ user, onRoleChange, onDelete }) {
+function RoleBadge({ role }) {
+  const map = {
+    alumno:        { cls: 'admin-badge-blue',   label: 'Alumno' },
+    profesor:      { cls: 'admin-badge-amber',  label: 'Profesor' },
+    administrador: { cls: 'admin-badge-purple', label: 'Admin' },
+  };
+  const { cls, label } = map[role] ?? { cls: 'admin-badge-blue', label: role };
+  return <span className={`admin-badge ${cls}`}>{label}</span>;
+}
+
+function EditUserModal({ user, onClose, onSaved }) {
+  const [form, setForm] = useState({ name: user.name, email: user.email });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSave = async () => {
+    if (!form.name.trim()) return setError('El nombre es obligatorio.');
+    setSaving(true);
+    setError(null);
+    try {
+      await adminApi.updateUser(user.id, form);
+      onSaved();
+      onClose();
+    } catch {
+      setError('No se pudo guardar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="admin-modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="admin-modal">
+        <div className="admin-modal-header">
+          <span className="admin-modal-title">Editar usuario</span>
+          <button className="admin-modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        {error && <Alert>{error}</Alert>}
+
+        <div className="admin-lfield">
+          <label>Nombre</label>
+          <input
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            placeholder="Nombre completo"
+          />
+        </div>
+        <div className="admin-lfield">
+          <label>Email</label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+            placeholder="email@ejemplo.com"
+          />
+        </div>
+        <div className="admin-lfield">
+          <label>Rol</label>
+          <select
+            value={form.role ?? user.role}
+            onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+          >
+            <option value="alumno">Alumno</option>
+            <option value="profesor">Profesor</option>
+            <option value="administrador">Administrador</option>
+          </select>
+        </div>
+
+        <div className="admin-modal-footer">
+          <button className="admin-btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="admin-btn-save" onClick={handleSave} disabled={saving}>
+            {saving ? 'Guardando…' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UserRow({ user, onEdit, onDelete }) {
   return (
     <tr>
       <td>
         <div className="admin-user-cell">
-          <div className="admin-avatar">{user.name[0].toUpperCase()}</div>
-          <span>{user.name}</span>
+          <div className="admin-avatar">{user.name?.[0]?.toUpperCase()}</div>
+          <span className="admin-name">{user.name}</span>
         </div>
       </td>
       <td className="admin-muted">{user.email}</td>
       <td>
-        <select
-          className="admin-role-select"
-          value={user.role}
-          onChange={e => onRoleChange(user.id, e.target.value)}
-        >
-          <option value="alumno">Alumno</option>
-          <option value="profesor">Profesor</option>
-          <option value="administrador">Administrador</option>
-        </select>
+        <RoleBadge role={user.role} />
       </td>
       <td>
-        <button
-          className="admin-btn-delete"
-          onClick={() => onDelete(user.id)}
-          title="Eliminar usuario"
-        >
-          <Trash2 size={16} />
-        </button>
+        <div className="admin-actions">
+          <button className="admin-btn-icon edit" onClick={() => onEdit(user)} title="Editar usuario">
+            <Pencil size={14} />
+          </button>
+          <button className="admin-btn-icon" onClick={() => onDelete(user.id)} title="Eliminar usuario">
+            <Trash2 size={14} />
+          </button>
+        </div>
       </td>
     </tr>
   );
 }
 
 export default function UsersSection() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
 
-  const fetchUsers = async () => {
-    try {
-      const res = await axios.get('/api/users');
-      setUsers(res.data);
-    } catch {
-      setError('No se pudieron cargar los usuarios.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: users = [], isLoading: loading, error: loadError } = useQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: adminApi.users,
+  });
 
-  useEffect(() => { fetchUsers(); }, []);
+  const invalidateUsers = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
 
-  const handleRoleChange = async (userId, newRole) => {
-    try {
-      await axios.put(`/api/users/${userId}`, { role: newRole });
-      fetchUsers();
-    } catch {
-      setError('No se pudo actualizar el rol.');
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (userId) => adminApi.removeUser(userId),
+    onSuccess: invalidateUsers,
+    onError: () => setError('No se pudo eliminar el usuario.'),
+  });
 
-  const handleDelete = async userId => {
+  const handleDelete = (userId) => {
     if (!window.confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
-    try {
-      await axios.delete(`/api/users/${userId}`);
-      fetchUsers();
-    } catch {
-      setError('No se pudo eliminar el usuario.');
-    }
+    deleteMutation.mutate(userId);
   };
 
   const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
+    u.name?.toLowerCase().includes(search.toLowerCase()) ||
+    u.email?.toLowerCase().includes(search.toLowerCase())
   );
 
   const stats = {
-    total: users.length,
-    alumnos: users.filter(u => u.role === 'alumno').length,
+    total:      users.length,
+    alumnos:    users.filter(u => u.role === 'alumno').length,
     profesores: users.filter(u => u.role === 'profesor').length,
-    admins: users.filter(u => u.role === 'administrador').length,
+    admins:     users.filter(u => u.role === 'administrador').length,
   };
 
-  if (loading) return <div className="admin-loading">Cargando usuarios…</div>;
+  if (loading) return <Loading minHeight="200px" message="Cargando usuarios…" />;
 
   return (
-    <div className="admin-section">
+    <div>
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSaved={invalidateUsers}
+        />
+      )}
+
       <div className="admin-section-header">
         <div>
           <h1>Usuarios</h1>
@@ -99,15 +170,15 @@ export default function UsersSection() {
       </div>
 
       <div className="admin-stats-grid">
-        <StatCard icon={<Users size={20} />}       label="Total"      value={stats.total}      color="#3b82f6" />
-        <StatCard icon={<BookOpen size={20} />}    label="Alumnos"    value={stats.alumnos}    color="#10b981" />
-        <StatCard icon={<UserCheck size={20} />}   label="Profesores" value={stats.profesores} color="#f59e0b" />
-        <StatCard icon={<ShieldCheck size={20} />} label="Admins"     value={stats.admins}     color="#8b5cf6" />
+        <StatCard icon={<Users size={18} />}       label="Total"      value={stats.total}      iconBg="#eef2ff" iconColor="#6366f1" />
+        <StatCard icon={<BookOpen size={18} />}    label="Alumnos"    value={stats.alumnos}    iconBg="#dcfce7" iconColor="#16a34a" />
+        <StatCard icon={<UserCheck size={18} />}   label="Profesores" value={stats.profesores} iconBg="#fef3c7" iconColor="#d97706" />
+        <StatCard icon={<ShieldCheck size={18} />} label="Admins"     value={stats.admins}     iconBg="#ede9fe" iconColor="#7c3aed" />
       </div>
 
-      {error && <div className="admin-alert">{error}</div>}
+      {(error || loadError) && <Alert>{error || 'No se pudieron cargar los usuarios.'}</Alert>}
 
-      <div className="admin-table-header">
+      <div className="admin-toolbar">
         <input
           className="admin-search"
           placeholder="Buscar por nombre o email…"
@@ -134,7 +205,7 @@ export default function UsersSection() {
                 <UserRow
                   key={u.id}
                   user={u}
-                  onRoleChange={handleRoleChange}
+                  onEdit={setEditingUser}
                   onDelete={handleDelete}
                 />
               ))

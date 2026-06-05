@@ -1,30 +1,24 @@
-import { useEffect, useState, useMemo } from 'react';
-import axios from 'axios';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { coursesApi } from '../../api';
+import { isTeacher } from '../../lib/roles';
 import Button from '../../components/Button';
 import CursoCard from '../../components/CursoCard';
+import Loading from '../../components/Loading';
+import EmptyState from '../../components/EmptyState';
+import Alert from '../../components/Alert';
 import './CoursesPage.css';
 
 export default function CoursesPage({ user }) {
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
 
-  const isProfessor = user.role === 'profesor' || user.role === 'administrador';
+  const isProfessor = isTeacher(user);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await axios.get('/api/courses');
-        setCourses(res.data);
-      } catch (err) {
-        setError('Error al cargar los cursos.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { data: courses = [], isLoading: loading, error } = useQuery({
+    queryKey: ['courses'],
+    queryFn: coursesApi.list,
+  });
 
   const displayedCourses = useMemo(() => {
     const coursesToShow = isProfessor
@@ -77,13 +71,11 @@ export default function CoursesPage({ user }) {
           </div>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert>{error}</Alert>}
         {loading ? (
-          <div className="courses-loading">Cargando cursos...</div>
+          <Loading message="Cargando cursos..." />
         ) : displayedCourses.length === 0 ? (
-          <div className="courses-empty">
-            {isProfessor ? 'No has creado ningún curso todavía.' : 'No hay cursos disponibles.'}
-          </div>
+          <EmptyState message={isProfessor ? 'No has creado ningún curso todavía.' : 'No hay cursos disponibles.'} />
         ) : (
           <div className="courses-grid">
             {displayedCourses.map((course) => (

@@ -1,15 +1,17 @@
-const {
-  listCourses: listCoursesService,
+import { wrapController } from '../../middleware/errorHandler.js';
+import {
+  listCourses as listCoursesService,
   findCourseById,
-  createCourse: createCourseService,
-  updateCourse: updateCourseService,
-  deleteCourse: deleteCourseService,
+  createCourse as createCourseService,
+  updateCourse as updateCourseService,
+  deleteCourse as deleteCourseService,
   getTeacherStats,
-  getCourseStats: getCourseStatsService,
-  getEnrolledCourses: getEnrolledCoursesService,
+  getCourseStats as getCourseStatsService,
+  getStudentsProgress as getStudentsProgressService,
+  getEnrolledCourses as getEnrolledCoursesService,
   enrollUser,
   isEnrolled
-} = require('../../services/course.service');
+} from '../../services/course.service.js';
 
 async function listCourses(req, res) {
   const courses = await listCoursesService();
@@ -26,15 +28,11 @@ async function getCourse(req, res) {
 
 async function createCourse(req, res) {
   const { title, description } = req.body;
-  if (!title || !title.trim()) {
-    return res.status(400).json({ message: 'El título es obligatorio.' });
-  }
-
   const coverImage = req.file ? `/uploads/courses/${req.file.filename}` : null;
 
   const course = await createCourseService({
-    title: title.trim(),
-    description: description ? description.trim() : '',
+    title,
+    description,
     createdBy: req.user.id,
     coverImage,
   });
@@ -53,15 +51,11 @@ async function updateCourse(req, res) {
   }
 
   const { title, description } = req.body;
-  if (!title || !title.trim()) {
-    return res.status(400).json({ message: 'El título es obligatorio.' });
-  }
-
   const coverImage = req.file ? `/uploads/courses/${req.file.filename}` : undefined;
 
   const updated = await updateCourseService(req.params.id, {
-    title: title.trim(),
-    description: description ? description.trim() : '',
+    title,
+    description,
     coverImage,
   });
 
@@ -102,13 +96,25 @@ async function getCourseStats(req, res) {
   res.json(stats);
 }
 
-async function enroll(req, res) {
-  try {
-    await enrollUser(req.user.id, req.params.id);
-    res.status(201).json({ message: 'Inscripción exitosa' });
-  } catch (err) {
-    res.status(500).json({ message: 'Error al inscribirse' });
+async function getCourseStudents(req, res) {
+  const course = await findCourseById(req.params.id);
+  if (!course) {
+    return res.status(404).json({ message: 'Curso no encontrado' });
   }
+
+  if (req.user.role !== 'administrador' && course.created_by !== req.user.id) {
+    return res.status(403).json({ message: 'No autorizado' });
+  }
+
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
+  const result = await getStudentsProgressService(req.params.id, page, limit);
+  res.json(result);
+}
+
+async function enroll(req, res) {
+  await enrollUser(req.user.id, req.params.id);
+  res.status(201).json({ message: 'Inscripción exitosa' });
 }
 
 async function listEnrolledCourses(req, res) {
@@ -121,7 +127,7 @@ async function checkEnrollment(req, res) {
   res.json({ enrolled });
 }
 
-module.exports = {
+export default wrapController({
   listCourses,
   getCourse,
   createCourse,
@@ -129,7 +135,8 @@ module.exports = {
   deleteCourse,
   getStats,
   getCourseStats,
+  getCourseStudents,
   listEnrolledCourses,
   enroll,
   checkEnrollment
-};
+});

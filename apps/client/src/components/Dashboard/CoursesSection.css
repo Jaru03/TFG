@@ -12,18 +12,19 @@
 .courses-section-header h2 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--clr-text-1);
   margin: 0;
 }
 
 .courses-link {
   font-size: 0.875rem;
-  color: #0056b3;
+  color: #6366f1;
   text-decoration: none;
   font-weight: 500;
 }
 
 .courses-link:hover {
+  color: #4f46e5;
   text-decoration: underline;
 }
 
@@ -33,37 +34,17 @@
   gap: 1rem;
 }
 
-.courses-loading,
-.courses-empty {
+.courses-span {
   grid-column: span 4;
-  text-align: center;
-  padding: 2rem;
-  color: #6b7280;
-  font-size: 0.875rem;
 }
 
 @media (max-width: 1024px) {
-  .courses-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .courses-loading,
-  .courses-empty {
-    grid-column: span 2;
-  }
+  .courses-grid { grid-template-columns: repeat(2, 1fr); }
+  .courses-span { grid-column: span 2; }
 }
 
 @media (max-width: 640px) {
-  .courses-section {
-    padding: 1.5rem 1rem;
-  }
-
-  .courses-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .courses-loading,
-  .courses-empty {
-    grid-column: span 1;
-  }
+  .courses-section { padding: 1.5rem 1rem; }
+  .courses-grid { grid-template-columns: 1fr; }
+  .courses-span { grid-column: span 1; }
 }

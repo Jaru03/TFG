@@ -1,27 +1,39 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+// La carga del .env debe ir la primera: al estar en su propio módulo se
+// evalúa antes que config/db.js y config/session.js, que leen process.env.
+import './config/env.js';
 
-const express = require('express');
-const session = require('express-session');
-const passport = require('passport');
-const cors = require('cors');
-const path = require('path');
+import path from 'path';
+import { fileURLToPath } from 'url';
+import express from 'express';
+import session from 'express-session';
+import passport from 'passport';
+import cors from 'cors';
 
-const { sessionConfig } = require('./config/session');
-require('./config/passport');
+import { sessionConfig } from './config/session.js';
+import { notFound, errorHandler } from './middleware/errorHandler.js';
+import './config/passport.js';
 
-const authRoutes = require('./routes/auth.routes');
-const adminRoutes = require('./routes/admin.routes');
-const apiAuthRoutes = require('./routes/api/auth.routes');
-const apiCourseRoutes = require('./routes/api/courses.routes');
-const apiUsersRoutes = require('./routes/api/users.routes');
-const apiLessonsRoutes = require('./routes/api/lessons.routes');
-const apiTestsRoutes = require('./routes/api/tests.routes');
-const apiQuestionsRoutes = require('./routes/api/questions.routes');
-const apiResultsRoutes = require('./routes/api/results.routes');
+import authRoutes from './routes/auth.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import apiAuthRoutes from './routes/api/auth.routes.js';
+import apiCourseRoutes from './routes/api/courses.routes.js';
+import apiUsersRoutes from './routes/api/users.routes.js';
+import apiLessonsRoutes from './routes/api/lessons.routes.js';
+import apiTestsRoutes from './routes/api/tests.routes.js';
+import apiQuestionsRoutes from './routes/api/questions.routes.js';
+import apiResultsRoutes from './routes/api/results.routes.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// CORS — acepta localhost y dominios ngrok dinámicamente
+// Detrás del proxy inverso (Nginx) se confía en la primera cabecera
+// X-Forwarded-Proto. Es necesario para que express-session emita la cookie
+// `secure` cuando la conexión original del cliente es HTTPS.
+app.set('trust proxy', 1);
+
+// CORS
 const ALLOWED_ORIGINS = [
   process.env.CLIENT_ORIGIN || 'http://localhost:5173',
   'http://localhost:5173',
@@ -29,10 +41,7 @@ const ALLOWED_ORIGINS = [
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin) return cb(null, true); // same-origin / curl
-      if (ALLOWED_ORIGINS.includes(origin) || /\.ngrok(-free)?\.app$/.test(origin) || /\.ngrok\.dev$/.test(origin)) {
-        return cb(null, true);
-      }
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
       cb(new Error(`CORS blocked: ${origin}`));
     },
     credentials: true,
@@ -76,15 +85,19 @@ app.use('/api/admin', adminRoutes);
 if (process.env.NODE_ENV === 'production') {
   const buildPath = path.join(__dirname, 'client', 'dist');
   app.use(express.static(buildPath));
+  // Las rutas de API/Auth no resueltas devuelven 404 JSON, no el index.html del SPA.
+  app.use(['/api', '/auth'], notFound);
+  // Cualquier otra ruta sirve la SPA (React Router se encarga del enrutado).
   app.get('*', (req, res) => {
     res.sendFile(path.join(buildPath, 'index.html'));
   });
 } else {
-  // 404 handler para el backend
-  app.use((req, res) => {
-    res.status(404).json({ message: 'Not Found' });
-  });
+  // 404 para rutas no encontradas, con formato JSON consistente.
+  app.use(notFound);
 }
+
+// Manejador de errores global. Debe ir el último, después de las rutas.
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

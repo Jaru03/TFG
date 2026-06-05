@@ -1,10 +1,9 @@
 import HeroSection from '../../components/Dashboard/HeroSection';
 import TeacherDashboard from '../../components/Dashboard/TeacherDashboard';
+import { isTeacher } from '../../lib/roles';
 
 export default function DashboardPage({ user }) {
-  const isTeacher = user.role === 'profesor' || user.role === 'administrador';
-
-  return isTeacher
+  return isTeacher(user)
     ? <TeacherDashboard user={user} />
-    : <HeroSection user={user} />;
+    : <HeroSection />;
 }

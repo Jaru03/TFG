@@ -1,6 +1,6 @@
 /* ── Shell ── */
 .acc-shell {
-  background: #f3f4f6;
+  background: var(--clr-bg);
   min-height: calc(100vh - 64px);
   padding: 2.5rem 1.5rem 4rem;
 }
@@ -71,7 +71,7 @@
   letter-spacing: 0.05em;
 }
 
-.role--alumno   { background: #dbeafe; color: #1d4ed8; }
+.role--alumno   { background: #e0e7ff; color: #4f46e5; }
 .role--profesor { background: #dcfce7; color: #15803d; }
 .role--admin    { background: #fef3c7; color: #b45309; }
 

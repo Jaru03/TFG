@@ -21,4 +21,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { isAuthenticated, requireRole };
+export { isAuthenticated, requireRole };

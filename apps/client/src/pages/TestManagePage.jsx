@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { testsApi } from '../api';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, Plus, Pencil, Trash2, Check } from 'lucide-react';
+import Loading from '../components/Loading';
+import EmptyState from '../components/EmptyState';
+import Alert from '../components/Alert';
+import PointsField from '../components/PointsField';
+import AutoTextarea from '../components/AutoTextarea';
 import './TestManagePage.css';
 
-const EMPTY_FORM = { question: '', optionA: '', optionB: '', optionC: '', correctOption: 'A' };
+const EMPTY_FORM = { question: '', optionA: '', optionB: '', optionC: '', correctOption: 'A', points: '' };
 
 // ── Correct-option toggle ───────────────────────────────────────────────────
 function CorrectToggle({ value, onChange }) {
@@ -58,7 +65,7 @@ function QuestionForm({ initial = EMPTY_FORM, onSave, onCancel }) {
 
       <div className="qform-row">
         <label>Enunciado</label>
-        <textarea
+        <AutoTextarea
           rows={3}
           placeholder="Escribe la pregunta…"
           value={form.question}
@@ -83,6 +90,8 @@ function QuestionForm({ initial = EMPTY_FORM, onSave, onCancel }) {
 
       <CorrectToggle value={form.correctOption} onChange={v => setForm(p => ({ ...p, correctOption: v }))} />
 
+      <PointsField value={form.points} onChange={v => setForm(p => ({ ...p, points: v }))} />
+
       <div className="qform-actions">
         <button type="button" className="qform-btn-ghost" onClick={onCancel}>Cancelar</button>
         <button type="submit" className="qform-btn-primary" disabled={saving}>
@@ -106,6 +115,9 @@ function QuestionCard({ q, index, onEdit, onDelete }) {
       <div className="qcard-top">
         <span className="qcard-num">{index + 1}</span>
         <p className="qcard-question">{q.question}</p>
+        <span className={`qcard-points ${q.points != null ? 'qcard-points--custom' : ''}`}>
+          {q.effective_points} pts{q.points == null ? ' (auto)' : ''}
+        </span>
         <div className="qcard-actions">
           <button className="qcard-icon-btn" title="Editar" onClick={onEdit}>
             <Pencil size={14} />
@@ -134,53 +146,70 @@ function QuestionCard({ q, index, onEdit, onDelete }) {
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function TestManagePage() {
   const { id: testId } = useParams();
-  const [test, setTest] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [editingValue, setEditingValue] = useState(false);
+  const [valueInput, setValueInput] = useState('');
 
-  const load = async () => {
+  const testKey = ['tests', testId];
+  const questionsKey = ['tests', testId, 'questions'];
+
+  const { data: test, isLoading: loadingTest, error: loadError } = useQuery({
+    queryKey: testKey,
+    queryFn: () => testsApi.get(testId),
+  });
+  const { data: questions = [], isLoading: loadingQuestions } = useQuery({
+    queryKey: questionsKey,
+    queryFn: () => testsApi.questions(testId),
+  });
+  const loading = loadingTest || loadingQuestions;
+
+  // El valor del test reparte puntos entre las preguntas, así que al cambiar
+  // cualquiera de los dos se invalidan ambas queries.
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: testKey });
+    queryClient.invalidateQueries({ queryKey: questionsKey });
+  };
+
+  const saveTestValue = async () => {
     try {
-      const [testRes, qRes] = await Promise.all([
-        axios.get(`/api/tests/${testId}`),
-        axios.get(`/api/tests/${testId}/questions`),
-      ]);
-      setTest(testRes.data);
-      setQuestions(qRes.data);
-    } catch {
-      setError('No se pudo cargar el test.');
-    } finally {
-      setLoading(false);
+      await testsApi.update(testId, {
+        title: test.title,
+        description: test.description,
+        maxScore: valueInput,
+      });
+      setEditingValue(false);
+      invalidate();
+    } catch (e) {
+      setError(e.response?.data?.message || 'No se pudo actualizar el valor del test.');
     }
   };
 
-  useEffect(() => { load(); }, [testId]);
-
   const handleCreate = async (form) => {
-    await axios.post(`/api/tests/${testId}/questions`, form);
+    await testsApi.createQuestion(testId, form);
     setCreating(false);
-    load();
+    invalidate();
   };
 
   const handleEdit = async (form, questionId) => {
-    await axios.put(`/api/tests/${testId}/questions/${questionId}`, form);
+    await testsApi.updateQuestion(testId, questionId, form);
     setEditingId(null);
-    load();
+    invalidate();
   };
 
   const handleDelete = async (questionId) => {
     if (!confirm('¿Eliminar esta pregunta?')) return;
     try {
-      await axios.delete(`/api/tests/${testId}/questions/${questionId}`);
-      load();
+      await testsApi.removeQuestion(testId, questionId);
+      invalidate();
     } catch {
       setError('No se pudo eliminar la pregunta.');
     }
   };
 
-  if (loading) return <div className="tmanage-loading">Cargando…</div>;
+  if (loading) return <Loading minHeight="40vh" />;
 
   return (
     <div className="tmanage-shell">
@@ -209,36 +238,89 @@ export default function TestManagePage() {
         <div className="tmanage-header">
           <h1>{test?.title}</h1>
           {test?.description && <p className="tmanage-desc">{test.description}</p>}
-          <span className="tmanage-badge">{questions.length} pregunta{questions.length !== 1 ? 's' : ''}</span>
+          <div className="tmanage-meta">
+            <span className="tmanage-badge">{questions.length} pregunta{questions.length !== 1 ? 's' : ''}</span>
+            {!editingValue ? (
+              <button
+                className="tmanage-value"
+                onClick={() => { setValueInput(Number(test.max_score)); setEditingValue(true); }}
+                title="Editar el valor total del test"
+              >
+                Valor: {Number(test?.max_score)} pts <Pencil size={12} />
+              </button>
+            ) : (
+              <span className="tmanage-value-edit">
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={valueInput}
+                  onChange={e => setValueInput(e.target.value)}
+                  autoFocus
+                />
+                <button className="tmanage-value-save" onClick={saveTestValue}>Guardar</button>
+                <button className="tmanage-value-cancel" onClick={() => setEditingValue(false)}>Cancelar</button>
+              </span>
+            )}
+          </div>
         </div>
 
-        {error && <div className="tmanage-alert">{error}</div>}
+        {(error || loadError) && <Alert>{error || 'No se pudo cargar el test.'}</Alert>}
 
         {/* Create form */}
-        {creating && (
-          <div className="tmanage-card tmanage-card--form">
-            <p className="tmanage-form-label">Nueva pregunta</p>
-            <QuestionForm
-              onSave={handleCreate}
-              onCancel={() => setCreating(false)}
-            />
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {creating && (
+            <motion.div
+              className="tmanage-card tmanage-card--form"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <p className="tmanage-form-label">Nueva pregunta</p>
+              <QuestionForm
+                onSave={handleCreate}
+                onCancel={() => setCreating(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Questions list */}
         {questions.length === 0 && !creating ? (
-          <div className="tmanage-empty">
-            <p>No hay preguntas todavía.</p>
-            <button className="tmanage-add-btn" onClick={() => setCreating(true)}>
-              <Plus size={15} /> Añadir primera pregunta
-            </button>
-          </div>
+          <EmptyState
+            boxed
+            message="No hay preguntas todavía."
+            action={(
+              <button className="tmanage-add-btn" onClick={() => setCreating(true)}>
+                <Plus size={15} /> Añadir primera pregunta
+              </button>
+            )}
+          />
         ) : (
-          <div className="tmanage-list">
+          <motion.div
+            className="tmanage-list"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          >
             {questions.map((q, idx) => (
-              <div key={q.id} className={`tmanage-card ${editingId === q.id ? 'tmanage-card--editing' : ''}`}>
+              <motion.div
+                key={q.id}
+                layout
+                transition={{ layout: { duration: 0.3, ease: [0.16, 1, 0.3, 1] } }}
+                style={{ borderRadius: '0.625rem' }}
+                className={`tmanage-card ${editingId === q.id ? 'tmanage-card--editing' : ''}`}
+              >
                 {editingId === q.id ? (
-                  <>
+                  <motion.div
+                    layout="position"
+                    key="edit"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2, delay: 0.08 }}
+                  >
                     <p className="tmanage-form-label">Editando pregunta {idx + 1}</p>
                     <QuestionForm
                       initial={{
@@ -247,22 +329,31 @@ export default function TestManagePage() {
                         optionB: q.option_b,
                         optionC: q.option_c,
                         correctOption: q.correct_option,
+                        points: q.points ?? '',
                       }}
                       onSave={(form) => handleEdit(form, q.id)}
                       onCancel={() => setEditingId(null)}
                     />
-                  </>
+                  </motion.div>
                 ) : (
-                  <QuestionCard
-                    q={q}
-                    index={idx}
-                    onEdit={() => { setEditingId(q.id); setCreating(false); }}
-                    onDelete={() => handleDelete(q.id)}
-                  />
+                  <motion.div
+                    layout="position"
+                    key="view"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2, delay: 0.08 }}
+                  >
+                    <QuestionCard
+                      q={q}
+                      index={idx}
+                      onEdit={() => { setEditingId(q.id); setCreating(false); }}
+                      onDelete={() => handleDelete(q.id)}
+                    />
+                  </motion.div>
                 )}
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

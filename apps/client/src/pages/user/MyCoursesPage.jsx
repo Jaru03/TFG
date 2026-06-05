@@ -1,25 +1,16 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { coursesApi } from '../../api';
 import CursoCard from '../../components/CursoCard';
+import Loading from '../../components/Loading';
+import EmptyState from '../../components/EmptyState';
+import Alert from '../../components/Alert';
 import './UserPages.css';
 
 export default function MyCoursesPage() {
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await axios.get('/api/courses/enrolled');
-        setCourses(res.data);
-      } catch {
-        setError('Error al cargar tus cursos.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { data: courses = [], isLoading: loading, error } = useQuery({
+    queryKey: ['courses', 'enrolled'],
+    queryFn: coursesApi.enrolled,
+  });
 
   return (
     <main className="user-page">
@@ -29,14 +20,14 @@ export default function MyCoursesPage() {
           <p className="user-page-subtitle">Cursos en los que estás inscrito</p>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert>Error al cargar tus cursos.</Alert>}
         {loading ? (
-          <div className="user-page-loading">Cargando...</div>
+          <Loading />
         ) : courses.length === 0 ? (
-          <div className="user-page-empty">
-            <p>No estás inscrito en ningún curso todavía.</p>
-            <a href="/courses" className="user-page-link">Explorar cursos</a>
-          </div>
+          <EmptyState
+            message="No estás inscrito en ningún curso todavía."
+            action={<a href="/courses" className="user-page-link">Explorar cursos</a>}
+          />
         ) : (
           <div className="user-courses-grid">
             {courses.map((course) => (

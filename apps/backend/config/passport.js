@@ -1,6 +1,8 @@
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { findByGoogleId, createUser, findById } = require('../services/user.service');
+import passport from 'passport';
+import passportGoogle from 'passport-google-oauth20';
+import { findByGoogleId, createUser, findById } from '../services/user.service.js';
+
+const GoogleStrategy = passportGoogle.Strategy;
 
 passport.serializeUser((user, done) => {
   done(null, user.id);

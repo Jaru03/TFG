@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import axios from 'axios';
-import { ArrowLeft, Check, ImagePlus, X } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { coursesApi } from '../../api';
+import { ArrowLeft, ImagePlus, X } from 'lucide-react';
+import Alert from '../../components/Alert';
+import AutoTextarea from '../../components/AutoTextarea';
 import './CourseFormPage.css';
 
-export default function CourseFormPage({ user }) {
+export default function CourseFormPage() {
   const [title, setTitle]           = useState('');
   const [description, setDescription] = useState('');
   const [coverFile, setCoverFile]   = useState(null);
@@ -12,27 +15,50 @@ export default function CourseFormPage({ user }) {
   const [existingCover, setExistingCover] = useState(null);
   const [error, setError]           = useState(null);
   const [success, setSuccess]       = useState(null);
-  const [loading, setLoading]       = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const fileRef = useRef();
 
   const editId = searchParams.get('edit');
   const isEditing = !!editId;
 
+  const { data: courseData } = useQuery({
+    queryKey: ['courses', editId],
+    queryFn: () => coursesApi.get(editId),
+    enabled: isEditing,
+  });
+
+  // Vuelca los datos del curso en el formulario cuando llegan (modo edición).
+  // Sembrar un formulario editable desde datos asíncronos es el patrón estándar
+  // (ver React docs); la regla set-state-in-effect no aplica a este caso.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!editId) return;
-    (async () => {
-      try {
-        const res = await axios.get(`/api/courses/${editId}`);
-        setTitle(res.data.title);
-        setDescription(res.data.description || '');
-        setExistingCover(res.data.cover_image || null);
-      } catch {
-        setError('No se pudo cargar el curso.');
+    if (courseData) {
+      setTitle(courseData.title);
+      setDescription(courseData.description || '');
+      setExistingCover(courseData.cover_image || null);
+    }
+  }, [courseData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const saveMutation = useMutation({
+    mutationFn: (fd) => (isEditing ? coursesApi.update(editId, fd) : coursesApi.create(fd)),
+    onSuccess: () => {
+      setSuccess(isEditing ? 'Curso actualizado correctamente.' : 'Curso creado correctamente.');
+      if (!isEditing) {
+        setTitle('');
+        setDescription('');
+        setCoverFile(null);
+        setCoverPreview(null);
       }
-    })();
-  }, [editId]);
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      setTimeout(() => navigate('/'), 1500);
+    },
+    onError: (err) => setError(err.response?.data?.message || 'Error al guardar el curso.'),
+  });
+
+  const loading = saveMutation.isPending;
 
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
@@ -48,7 +74,7 @@ export default function CourseFormPage({ user }) {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const handleSubmit = async (ev) => {
+  const handleSubmit = (ev) => {
     ev.preventDefault();
     setError(null);
     setSuccess(null);
@@ -58,31 +84,12 @@ export default function CourseFormPage({ user }) {
       return;
     }
 
-    setLoading(true);
+    const fd = new FormData();
+    fd.append('title', title.trim());
+    fd.append('description', description.trim());
+    if (coverFile) fd.append('cover', coverFile);
 
-    try {
-      const fd = new FormData();
-      fd.append('title', title.trim());
-      fd.append('description', description.trim());
-      if (coverFile) fd.append('cover', coverFile);
-
-      if (isEditing) {
-        await axios.put(`/api/courses/${editId}`, fd);
-        setSuccess('Curso actualizado correctamente.');
-      } else {
-        await axios.post('/api/courses', fd);
-        setSuccess('Curso creado correctamente.');
-        setTitle('');
-        setDescription('');
-        setCoverFile(null);
-        setCoverPreview(null);
-      }
-      setTimeout(() => navigate('/courses'), 1500);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar el curso.');
-    } finally {
-      setLoading(false);
-    }
+    saveMutation.mutate(fd);
   };
 
   const previewSrc = coverPreview || existingCover;
@@ -91,9 +98,9 @@ export default function CourseFormPage({ user }) {
     <div className="course-form-page">
       <div className="course-form-container">
         <div className="course-form-header">
-          <Link to="/courses" className="course-form-back">
+          <Link to="/" className="course-form-back">
             <ArrowLeft size={20} />
-            <span>Volver</span>
+            <span>Volver al inicio</span>
           </Link>
         </div>
 
@@ -103,14 +110,8 @@ export default function CourseFormPage({ user }) {
             <p>{isEditing ? 'Actualiza los datos de tu curso' : 'Completa la información para crear tu curso'}</p>
           </div>
 
-          {error && (
-            <div className="course-form-alert course-form-alert-error">{error}</div>
-          )}
-          {success && (
-            <div className="course-form-alert course-form-alert-success">
-              <Check size={18} />{success}
-            </div>
-          )}
+          {error && <Alert>{error}</Alert>}
+          {success && <Alert type="success">{success}</Alert>}
 
           <form onSubmit={handleSubmit}>
             {/* Cover image picker */}
@@ -173,7 +174,7 @@ export default function CourseFormPage({ user }) {
 
             <div className="course-form-group">
               <label htmlFor="description">Descripción</label>
-              <textarea
+              <AutoTextarea
                 id="description"
                 placeholder="Describe el contenido y objetivos del curso..."
                 rows={6}
@@ -187,7 +188,7 @@ export default function CourseFormPage({ user }) {
               <button
                 type="button"
                 className="course-form-btn course-form-btn-secondary"
-                onClick={() => navigate('/courses')}
+                onClick={() => navigate('/')}
                 disabled={loading}
               >
                 Cancelar

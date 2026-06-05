@@ -1,35 +1,44 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { CheckCircle, BookOpen, Award } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { resultsApi, coursesApi } from '../../api';
+import { CheckCircle, Award, GraduationCap } from 'lucide-react';
+import StatCard from '../../components/StatCard';
+import Loading from '../../components/Loading';
+import EmptyState from '../../components/EmptyState';
+import Alert from '../../components/Alert';
 import './UserPages.css';
 
 export default function ProgressPage() {
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { data: results = [], isLoading: loadingResults, error: errorResults } = useQuery({
+    queryKey: ['results', 'me'],
+    queryFn: resultsApi.me,
+  });
+  const { data: enrolledCourses = [], isLoading: loadingCourses, error: errorCourses } = useQuery({
+    queryKey: ['courses', 'enrolled'],
+    queryFn: coursesApi.enrolled,
+  });
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await axios.get('/api/results/me');
-        setResults(res.data);
-      } catch {
-        setError('Error al cargar tu progreso.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const loading = loadingResults || loadingCourses;
+  const error = errorResults || errorCourses;
+  const lessonsCompleted = enrolledCourses.reduce((sum, c) => sum + (c.completed_lessons || 0), 0);
 
-  const byCourse = results.reduce((acc, r) => {
+  // Nos quedamos con el MEJOR intento de cada test (no todos los intentos).
+  const bestByTest = {};
+  for (const r of results) {
+    const score = Number(r.score);
+    const cur = bestByTest[r.test_id];
+    if (!cur || score > Number(cur.score)) bestByTest[r.test_id] = r;
+  }
+  const bestResults = Object.values(bestByTest);
+
+  const byCourse = bestResults.reduce((acc, r) => {
     if (!acc[r.course_title]) acc[r.course_title] = [];
     acc[r.course_title].push(r);
     return acc;
   }, {});
 
-  const totalTests = results.length;
+  const totalTests = bestResults.length;
   const avgScore = totalTests > 0
-    ? (results.reduce((sum, r) => sum + r.score, 0) / totalTests).toFixed(1)
+    ? (bestResults.reduce((sum, r) => sum + Number(r.score), 0) / totalTests).toFixed(1)
     : 0;
 
   return (
@@ -40,40 +49,22 @@ export default function ProgressPage() {
           <p className="user-page-subtitle">Historial de tests completados</p>
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert>Error al cargar tu progreso.</Alert>}
         {loading ? (
-          <div className="user-page-loading">Cargando...</div>
+          <Loading />
         ) : (
           <>
             <div className="progress-stats">
-              <div className="progress-stat-card">
-                <CheckCircle size={24} className="progress-stat-icon green" />
-                <div>
-                  <span className="progress-stat-value">{totalTests}</span>
-                  <span className="progress-stat-label">Tests completados</span>
-                </div>
-              </div>
-              <div className="progress-stat-card">
-                <Award size={24} className="progress-stat-icon blue" />
-                <div>
-                  <span className="progress-stat-value">{avgScore}</span>
-                  <span className="progress-stat-label">Puntuación media</span>
-                </div>
-              </div>
-              <div className="progress-stat-card">
-                <BookOpen size={24} className="progress-stat-icon purple" />
-                <div>
-                  <span className="progress-stat-value">{Object.keys(byCourse).length}</span>
-                  <span className="progress-stat-label">Cursos con actividad</span>
-                </div>
-              </div>
+              <StatCard icon={<CheckCircle size={18} />}   value={totalTests}       label="Tests completados"     iconBg="#dcfce7" iconColor="#16a34a" />
+              <StatCard icon={<GraduationCap size={18} />} value={lessonsCompleted} label="Lecciones completadas" iconBg="#fef3c7" iconColor="#d97706" />
+              <StatCard icon={<Award size={18} />}         value={avgScore}         label="Puntuación media"      iconBg="#eef2ff" iconColor="#6366f1" />
             </div>
 
             {totalTests === 0 ? (
-              <div className="user-page-empty">
-                <p>Aún no has completado ningún test.</p>
-                <a href="/my-courses" className="user-page-link">Ver mis cursos</a>
-              </div>
+              <EmptyState
+                message="Aún no has completado ningún test."
+                action={<a href="/my-courses" className="user-page-link">Ver mis cursos</a>}
+              />
             ) : (
               <div className="progress-courses">
                 {Object.entries(byCourse).map(([courseTitle, courseResults]) => (
@@ -83,7 +74,7 @@ export default function ProgressPage() {
                       {courseResults.map((r) => (
                         <div key={r.id} className="progress-result-row">
                           <span className="progress-test-name">{r.test_title}</span>
-                          <span className="progress-score">{r.score} pts</span>
+                          <span className="progress-score">{Number(r.score)} pts</span>
                           <span className="progress-date">
                             {new Date(r.completed_at).toLocaleDateString('es-ES')}
                           </span>

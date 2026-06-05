@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { coursesApi, resultsApi } from '../../api';
+import { isTeacher } from '../../lib/roles';
 import {
   Calendar, LogOut, Library, BarChart2, ChevronRight, Mail,
   BookOpen, Users, ClipboardCheck, Plus,
@@ -57,16 +58,15 @@ const GoogleIcon = () => (
 
 // ── Student section ────────────────────────────────────────────────────────
 function StudentContent() {
-  const [stats, setStats] = useState(null);
-
-  useEffect(() => {
-    Promise.all([
-      axios.get('/api/courses/enrolled'),
-      axios.get('/api/results/me'),
-    ]).then(([cRes, rRes]) => {
-      setStats({ courses: cRes.data.length, tests: rRes.data.length });
-    }).catch(() => setStats({ courses: 0, tests: 0 }));
-  }, []);
+  const { data: courses = [] } = useQuery({
+    queryKey: ['courses', 'enrolled'],
+    queryFn: coursesApi.enrolled,
+  });
+  const { data: results = [] } = useQuery({
+    queryKey: ['results', 'me'],
+    queryFn: resultsApi.me,
+  });
+  const stats = { courses: courses.length, tests: results.length };
 
   return (
     <>
@@ -94,13 +94,10 @@ function StudentContent() {
 
 // ── Teacher section ────────────────────────────────────────────────────────
 function TeacherContent() {
-  const [stats, setStats] = useState(null);
-
-  useEffect(() => {
-    axios.get('/api/courses/stats')
-      .then(r => setStats(r.data))
-      .catch(() => setStats({ courses: 0, students: 0, testsCompleted: 0 }));
-  }, []);
+  const { data: stats } = useQuery({
+    queryKey: ['courses', 'stats'],
+    queryFn: coursesApi.teacherStats,
+  });
 
   return (
     <>
@@ -137,8 +134,6 @@ export default function AccountPage({ user, logout }) {
   const joinDate = user.created_at
     ? new Date(user.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })
     : null;
-
-  const isTeacher = user.role === 'profesor' || user.role === 'administrador';
 
   return (
     <main className="acc-shell">
@@ -180,7 +175,7 @@ export default function AccountPage({ user, logout }) {
         </div>
 
         {/* ── Contenido por rol ── */}
-        {isTeacher ? <TeacherContent /> : <StudentContent />}
+        {isTeacher(user) ? <TeacherContent /> : <StudentContent />}
 
         {/* ── Sesión ── */}
         <div className="acc-session">

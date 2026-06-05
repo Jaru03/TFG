@@ -1,67 +1,68 @@
-const { query } = require('../config/db');
+import prisma from '../config/prisma.js';
+
+function toUser(p) {
+  if (!p) return null;
+  return {
+    id: p.id,
+    google_id: p.googleId,
+    name: p.name,
+    email: p.email,
+    role_id: p.roleId,
+    created_at: p.createdAt,
+    role: p.role?.name ?? null,
+  };
+}
 
 async function findByGoogleId(googleId) {
-  const rows = await query(
-    'SELECT u.*, r.name AS role FROM users u JOIN roles r ON u.role_id = r.id WHERE u.google_id = $1',
-    [googleId]
-  );
-  return rows[0] || null;
+  return toUser(await prisma.user.findUnique({
+    where: { googleId },
+    include: { role: true },
+  }));
 }
 
 async function findById(id) {
-  const rows = await query(
-    'SELECT u.*, r.name AS role FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = $1',
-    [id]
-  );
-  return rows[0] || null;
-}
-
-async function findByEmail(email) {
-  const rows = await query(
-    'SELECT u.*, r.name AS role FROM users u JOIN roles r ON u.role_id = r.id WHERE u.email = $1',
-    [email]
-  );
-  return rows[0] || null;
-}
-
-async function getRoleId(roleName) {
-  const rows = await query('SELECT id FROM roles WHERE name = $1', [roleName]);
-  return rows[0] ? rows[0].id : null;
+  return toUser(await prisma.user.findUnique({
+    where: { id: Number(id) },
+    include: { role: true },
+  }));
 }
 
 async function createUser({ googleId, name, email, role = 'alumno' }) {
-  const roleId = await getRoleId(role);
-  const rows = await query(
-    'INSERT INTO users (google_id, name, email, role_id) VALUES ($1, $2, $3, $4) RETURNING id',
-    [googleId, name, email, roleId]
-  );
-  const userId = rows[0].id;
-  return findById(userId);
+  const roleRecord = await prisma.role.findUnique({ where: { name: role } });
+  return toUser(await prisma.user.create({
+    data: { googleId, name, email, roleId: roleRecord.id },
+    include: { role: true },
+  }));
 }
 
 async function updateRole(userId, roleName) {
-  const roleId = await getRoleId(roleName);
-  if (!roleId) return null;
-  await query('UPDATE users SET role_id = $1 WHERE id = $2', [roleId, userId]);
-  return findById(userId);
+  const roleRecord = await prisma.role.findUnique({ where: { name: roleName } });
+  if (!roleRecord) return null;
+  return toUser(await prisma.user.update({
+    where: { id: Number(userId) },
+    data: { roleId: roleRecord.id },
+    include: { role: true },
+  }));
 }
 
 async function listUsers() {
-  return query(
-    'SELECT u.id, u.name, u.email, r.name AS role, u.created_at FROM users u JOIN roles r ON u.role_id = r.id ORDER BY u.created_at DESC'
-  );
+  const users = await prisma.user.findMany({
+    include: { role: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  return users.map(toUser);
+}
+
+async function updateUser(id, { name, email }) {
+  return toUser(await prisma.user.update({
+    where: { id: Number(id) },
+    data: { name, email },
+    include: { role: true },
+  }));
 }
 
 async function deleteUserById(id) {
-  await query('DELETE FROM users WHERE id = $1', [id]);
+  await prisma.user.delete({ where: { id: Number(id) } });
 }
 
-module.exports = {
-  findByGoogleId,
-  findById,
-  findByEmail,
-  createUser,
-  updateRole,
-  listUsers,
-  deleteUserById
-};
+export { findByGoogleId, findById, createUser, updateRole, updateUser, listUsers, deleteUserById };

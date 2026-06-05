@@ -1,5 +1,6 @@
-const { listUsers: listUsersService, updateRole, findById } = require('../../services/user.service');
-const { deleteUserById } = require('../../services/user.service');
+import { wrapController } from '../../middleware/errorHandler.js';
+import { listUsers as listUsersService, updateRole, findById } from '../../services/user.service.js';
+import { deleteUserById } from '../../services/user.service.js';
 
 async function listUsers(req, res) {
   const users = await listUsersService();
@@ -30,8 +31,8 @@ async function deleteUser(req, res) {
   res.status(204).end();
 }
 
-module.exports = {
+export default wrapController({
   listUsers,
   changeUserRole,
   deleteUser
-};
+});

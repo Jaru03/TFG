@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import axios from "axios";
 import { useAuth } from "./hooks/useAuth";
+import { isTeacher } from "./lib/roles";
 import Layout from "./components/Layout";
 import {
   AccountPage,
@@ -20,8 +20,6 @@ import {
   TestViewPage,
 } from "./pages";
 
-axios.defaults.withCredentials = true;
-
 function App() {
   const { user, checking, logout } = useAuth();
 
@@ -29,25 +27,20 @@ function App() {
     return <div className="loading">Cargando...</div>;
   }
 
-  const isProfessor = user && (user.role === 'profesor' || user.role === 'administrador');
-
-  const ProtectedLayout = () => {
-    if (!user) return <Navigate to="/login" replace />;
-    return <Layout user={user} logout={logout} />;
-  };
+  const isProfessor = isTeacher(user);
 
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
 
-      <Route element={<ProtectedLayout />}>
+      <Route element={user ? <Layout user={user} logout={logout} /> : <Navigate to="/login" replace />}>
         <Route path="/" element={<DashboardPage user={user} />} />
         <Route path="/courses" element={<CoursesPage user={user} />} />
-        <Route path="/courses/create" element={<CourseFormPage user={user} />} />
+        <Route path="/courses/create" element={<CourseFormPage />} />
         <Route path="/courses/:id" element={
           isProfessor 
-            ? <CourseDetailTeacher user={user} /> 
-            : <CourseDetailPage user={user} />
+            ? <CourseDetailTeacher />
+            : <CourseDetailPage />
         } />
         <Route path="/courses/:id/lessons" element={<LessonsPage user={user} />} />
         <Route path="/courses/:id/tests" element={<TestsPage user={user} />} />
@@ -58,7 +51,7 @@ function App() {
         <Route path="/account" element={<AccountPage user={user} logout={logout} />} />
       </Route>
 
-      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin/*" element={<AdminPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

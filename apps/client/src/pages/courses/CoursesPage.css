@@ -1,5 +1,5 @@
 .courses-page {
-  background: #f9fafb;
+  background: var(--clr-bg);
   min-height: calc(100vh - 64px);
 }
 
@@ -21,7 +21,7 @@
 .courses-page-toolbar h1 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--clr-text-1);
   margin: 0;
 }
 
@@ -33,37 +33,36 @@
 
 .courses-search {
   padding: 0.5rem 0.875rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r);
   font-size: 0.875rem;
+  font-family: inherit;
   outline: none;
-  transition: border-color 0.2s;
-  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--clr-surface);
   min-width: 280px;
 }
 
 .courses-search:focus {
-  border-color: #0056b3;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,.12);
 }
 
-.courses-search::placeholder {
-  color: #9ca3af;
-}
+.courses-search::placeholder { color: var(--clr-text-3); }
 
 .courses-select {
   padding: 0.5rem 0.875rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--r);
   font-size: 0.875rem;
-  background: #fff;
+  font-family: inherit;
+  background: var(--clr-surface);
   cursor: pointer;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s;
 }
 
-.courses-select:focus {
-  border-color: #0056b3;
-}
+.courses-select:focus { border-color: #6366f1; }
 
 .courses-grid {
   display: grid;
@@ -71,40 +70,14 @@
   gap: 1rem;
 }
 
-.courses-loading,
-.courses-empty {
-  text-align: center;
-  padding: 3rem;
-  color: #6b7280;
-  font-size: 0.95rem;
-}
-
 @media (max-width: 1024px) {
-  .courses-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .courses-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
-  .courses-page-container {
-    padding: 1.5rem 1rem;
-  }
-
-  .courses-page-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .courses-toolbar-right {
-    flex-wrap: wrap;
-  }
-
-  .courses-search {
-    min-width: 100%;
-    flex: 1;
-  }
-
-  .courses-grid {
-    grid-template-columns: 1fr;
-  }
+  .courses-page-container { padding: 1.5rem 1rem; }
+  .courses-page-toolbar { flex-direction: column; align-items: stretch; }
+  .courses-toolbar-right { flex-wrap: wrap; }
+  .courses-search { min-width: 100%; flex: 1; }
+  .courses-grid { grid-template-columns: 1fr; }
 }

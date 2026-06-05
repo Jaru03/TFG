@@ -1,5 +1,5 @@
 .header {
-  background: #111827;
+  background: #080d17;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -24,7 +24,7 @@
 }
 
 .header-logo {
-  color: #60a5fa;
+  color: #818cf8;
 }
 
 .header-brand span {
@@ -52,7 +52,7 @@
 }
 
 .header-link:hover {
-  background: #1f2937;
+  background: #1e293b;
   color: #fff;
 }
 

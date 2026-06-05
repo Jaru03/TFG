@@ -1,35 +1,45 @@
-const { query } = require('../config/db');
+import prisma from '../config/prisma.js';
+
+function toTest(p, extra = {}) {
+  if (!p) return null;
+  return {
+    id: p.id,
+    course_id: p.courseId,
+    title: p.title,
+    description: p.description,
+    max_score: Number(p.maxScore),
+    ...extra,
+  };
+}
 
 async function listTestsByCourse(courseId) {
-  return query('SELECT * FROM tests WHERE course_id = $1', [courseId]);
+  const tests = await prisma.test.findMany({
+    where: { courseId: Number(courseId) },
+  });
+  return tests.map(t => toTest(t));
 }
 
 async function findTestById(id) {
-  const rows = await query('SELECT * FROM tests WHERE id = $1', [id]);
-  return rows[0] || null;
+  return toTest(await prisma.test.findUnique({ where: { id: Number(id) } }));
 }
 
-async function createTest({ courseId, title, description }) {
-  const rows = await query(
-    'INSERT INTO tests (course_id, title, description) VALUES ($1, $2, $3) RETURNING id',
-    [courseId, title, description]
-  );
-  return findTestById(rows[0].id);
+async function createTest({ courseId, title, description, maxScore = 10 }) {
+  return toTest(await prisma.test.create({
+    data: { courseId: Number(courseId), title, description, maxScore: Number(maxScore) },
+  }));
 }
 
-async function updateTest(id, { title, description }) {
-  await query('UPDATE tests SET title = $1, description = $2 WHERE id = $3', [title, description, id]);
-  return findTestById(id);
+async function updateTest(id, { title, description, maxScore }) {
+  const data = { title, description };
+  if (maxScore != null) data.maxScore = Number(maxScore);
+  return toTest(await prisma.test.update({
+    where: { id: Number(id) },
+    data,
+  }));
 }
 
 async function deleteTest(id) {
-  await query('DELETE FROM tests WHERE id = $1', [id]);
+  await prisma.test.delete({ where: { id: Number(id) } });
 }
 
-module.exports = {
-  listTestsByCourse,
-  findTestById,
-  createTest,
-  updateTest,
-  deleteTest
-};
+export { listTestsByCourse, findTestById, createTest, updateTest, deleteTest };

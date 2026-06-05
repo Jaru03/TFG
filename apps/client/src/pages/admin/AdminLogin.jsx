@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GraduationCap } from 'lucide-react';
+import Alert from '../../components/Alert';
 
 export default function AdminLogin({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -30,7 +31,7 @@ export default function AdminLogin({ onLogin }) {
         <h2>Backoffice</h2>
         <p>Acceso restringido a administradores</p>
 
-        {error && <div className="admin-alert">{error}</div>}
+        {error && <Alert>{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
           <div className="admin-field">

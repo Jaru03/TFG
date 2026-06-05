@@ -1,38 +1,47 @@
-const { query } = require('../config/db');
+import prisma from '../config/prisma.js';
+
+function toResult(p) {
+  if (!p) return null;
+  return {
+    id: p.id,
+    user_id: p.userId,
+    test_id: p.testId,
+    score: Number(p.score),
+    completed_at: p.completedAt,
+    ...(p.test ? { test_title: p.test.title, course_title: p.test.course?.title ?? null } : {}),
+    ...(p.user ? { user_name: p.user.name, email: p.user.email } : {}),
+  };
+}
 
 async function createResult({ userId, testId, score }) {
-  const rows = await query(
-    'INSERT INTO results (user_id, test_id, score) VALUES ($1, $2, $3) RETURNING id',
-    [userId, testId, score]
-  );
-  return rows[0];
+  const result = await prisma.result.create({
+    data: { userId: Number(userId), testId: Number(testId), score: Number(score) },
+  });
+  return { id: result.id };
+}
+
+async function countAttempts(userId, testId) {
+  return prisma.result.count({
+    where: { userId: Number(userId), testId: Number(testId) },
+  });
 }
 
 async function listResultsByUser(userId) {
-  return query(
-    `SELECT r.*, t.title AS test_title, c.title AS course_title
-     FROM results r
-     JOIN tests t ON r.test_id = t.id
-     JOIN courses c ON t.course_id = c.id
-     WHERE r.user_id = $1
-     ORDER BY r.completed_at DESC`,
-    [userId]
-  );
+  const results = await prisma.result.findMany({
+    where: { userId: Number(userId) },
+    include: { test: { include: { course: { select: { title: true } } } } },
+    orderBy: { completedAt: 'desc' },
+  });
+  return results.map(toResult);
 }
 
 async function listResultsByTest(testId) {
-  return query(
-    `SELECT r.*, u.name AS user_name, u.email
-     FROM results r
-     JOIN users u ON r.user_id = u.id
-     WHERE r.test_id = $1
-     ORDER BY r.completed_at DESC`,
-    [testId]
-  );
+  const results = await prisma.result.findMany({
+    where: { testId: Number(testId) },
+    include: { user: { select: { name: true, email: true } } },
+    orderBy: { completedAt: 'desc' },
+  });
+  return results.map(toResult);
 }
 
-module.exports = {
-  createResult,
-  listResultsByUser,
-  listResultsByTest
-};
+export { createResult, countAttempts, listResultsByUser, listResultsByTest };

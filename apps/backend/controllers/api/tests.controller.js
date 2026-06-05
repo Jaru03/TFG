@@ -1,10 +1,11 @@
-const {
+import { wrapController } from '../../middleware/errorHandler.js';
+import {
   listTestsByCourse,
   findTestById,
-  createTest: createTestService,
-  updateTest: updateTestService,
-  deleteTest: deleteTestService
-} = require('../../services/test.service');
+  createTest as createTestService,
+  updateTest as updateTestService,
+  deleteTest as deleteTestService
+} from '../../services/test.service.js';
 
 async function listTests(req, res) {
   const { courseId } = req.params;
@@ -22,17 +23,9 @@ async function getTest(req, res) {
 
 async function createTest(req, res) {
   const { courseId } = req.params;
-  const { title, description } = req.body;
+  const { title, description, maxScore } = req.body;
 
-  if (!title || !title.trim()) {
-    return res.status(400).json({ message: 'El título es obligatorio.' });
-  }
-
-  const test = await createTestService({
-    courseId,
-    title: title.trim(),
-    description: description ? description.trim() : ''
-  });
+  const test = await createTestService({ courseId, title, description, maxScore });
 
   res.status(201).json(test);
 }
@@ -43,14 +36,11 @@ async function updateTest(req, res) {
     return res.status(404).json({ message: 'Test no encontrado' });
   }
 
-  const { title, description } = req.body;
-  if (!title || !title.trim()) {
-    return res.status(400).json({ message: 'El título es obligatorio.' });
-  }
-
+  const { title, description, maxScore } = req.body;
   const updated = await updateTestService(req.params.id, {
-    title: title.trim(),
-    description: description ? description.trim() : ''
+    title,
+    description,
+    maxScore // undefined => el servicio conserva el valor actual
   });
 
   res.json(updated);
@@ -61,10 +51,10 @@ async function deleteTest(req, res) {
   res.status(204).end();
 }
 
-module.exports = {
+export default wrapController({
   listTests,
   getTest,
   createTest,
   updateTest,
   deleteTest
-};
+});

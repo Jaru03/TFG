@@ -10,12 +10,57 @@ services:
       - "5434:5432"
     volumes:
       - edutech:/var/lib/postgresql/data
-      - ./apps/backend/database/elearning_platform.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # El esquema y los datos iniciales (roles) los gestiona Prisma mediante
+      # `migrate deploy`, que se ejecuta al arrancar el servicio backend.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-elearning_platform}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # Conexión a la base de datos dentro de la red de compose (servicio "db").
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-elearning_platform}
+      # Secretos y configuración (se leen del fichero .env de la raíz).
+      SESSION_SECRET: ${SESSION_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN}
+      ADMIN_USER: ${ADMIN_USER}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    # Aplica las migraciones de Prisma y arranca el servidor. Como depende del
+    # healthcheck de "db", la base de datos ya está lista en este punto.
+    command: sh -c "npx prisma migrate deploy && node app.js"
+    volumes:
+      - uploads:/app/apps/backend/uploads
+    expose:
+      - "3000"
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      # Para HTTPS, añade aquí "443:443" y monta los certificados TLS en Nginx.
+
 volumes:
   edutech:
+  uploads:

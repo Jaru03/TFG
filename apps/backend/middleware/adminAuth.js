@@ -5,4 +5,4 @@ function requireAdmin(req, res, next) {
   res.status(401).json({ message: 'No autorizado' });
 }
 
-module.exports = { requireAdmin };
+export { requireAdmin };

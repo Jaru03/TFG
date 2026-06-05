@@ -1,25 +1,16 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { coursesApi } from "../../api";
 import CursoCard from "../CursoCard";
+import Loading from "../Loading";
+import EmptyState from "../EmptyState";
 import "./CoursesSection.css";
 
 const CoursesSection = () => {
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await axios.get("/api/courses");
-        setCourses(res.data);
-      } catch (err) {
-        console.error("Error loading courses", err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { data: courses = [], isLoading: loading } = useQuery({
+    queryKey: ["courses"],
+    queryFn: coursesApi.list,
+  });
 
   return (
     <section className="courses-section">
@@ -29,9 +20,9 @@ const CoursesSection = () => {
       </div>
       <div className="courses-grid">
         {loading ? (
-          <div className="courses-loading">Cargando cursos...</div>
+          <Loading className="courses-span" message="Cargando cursos..." />
         ) : courses.length === 0 ? (
-          <div className="courses-empty">No hay cursos disponibles</div>
+          <EmptyState className="courses-span" message="No hay cursos disponibles" />
         ) : (
           courses.slice(0, 4).map((course) => (
             <CursoCard key={course.id} course={course} />
